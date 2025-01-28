@@ -1,2 +1,3 @@
 /__pycache__
+# to avoid leaking sensitive information
 /data.py

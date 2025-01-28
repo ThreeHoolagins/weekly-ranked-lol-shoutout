@@ -14,7 +14,7 @@ def get_day_with_suffix(day):
         suffixes = {1: 'st', 2: 'nd', 3: 'rd'}
         return f"{day}{suffixes.get(day % 10, 'th')}"
 
-def messageGroup(riot_api_key, discord_bot_api_key):
+def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
     riot_api_headers = {
         "X-Riot-Token": riot_api_key,
         "Accept-Language" : "en-US,en;q=0.9",
@@ -29,11 +29,15 @@ def messageGroup(riot_api_key, discord_bot_api_key):
         for i in range(0, FRIENDS_GAME_NAMES.__len__()):
             url = API_URL + f"/riot/account/v1/accounts/by-riot-id/{FRIENDS_GAME_NAMES[i]}/{FRIENDS_TAG_LINE[i]}"
             peopleIds.append(requests.get(url, headers=riot_api_headers).json())
+            if (debugFlag):
+                print(peopleIds[i])
             time.sleep(.1)
         
         for i in range(0, peopleIds.__len__()):
             url = API_URL2 + f"/lol/summoner/v4/summoners/by-puuid/{peopleIds[i]['puuid']}"
             summonerIds.append(requests.get(url, headers=riot_api_headers).json())
+            if (debugFlag):
+                print(summonerIds[i])
             time.sleep(.1)
             
         now = datetime.now()
@@ -49,6 +53,8 @@ def messageGroup(riot_api_key, discord_bot_api_key):
                 unrankedFriends.append(FRIENDS_GAME_NAMES[i])
             else:
                 message += f"{FRIENDS_GAME_NAMES[i]} is {obj[0]['tier']} {obj[0]['rank']}, {obj[0]['leaguePoints']} LP\n"
+            if (debugFlag):
+                print(message)
             time.sleep(.1)
             
         message += "\n"
@@ -57,16 +63,16 @@ def messageGroup(riot_api_key, discord_bot_api_key):
                 message += f"and {unrankedFriends[i]} are all unranked! Finish your placements!\n```"
             else:
                 message += f"{unrankedFriends[i]}, "
-            
-        # print(message)
-        maybeSuccess = requests.post(f"https://discord.com/api/v10/channels/{DISCORD_CHANNEL_ID}/messages", 
-                                     headers={"Authorization": f"{discord_bot_api_key}"},
-                                     json={"content": message,
-                                           "tts": "false"})
-        
-        print(maybeSuccess)
+
+        if (debugFlag):
+            print(message)
+
+        if (not debugFlag):
+            maybeSuccess = requests.post(f"https://discord.com/api/v10/channels/{DISCORD_CHANNEL_ID}/messages", 
+                headers={"Authorization": f"{discord_bot_api_key}"},
+                json={"content": message, "tts": "false"})
+            print(maybeSuccess)
         
     except requests.exceptions.RequestException as e:
         print("Error: ", e, e.strerror)
         return
-        
