@@ -24,32 +24,32 @@ class ranked_player:
         total_value = 0
         
         if (self.playerTier == "UNRANKED"):
-            total_value += 0
+            total_value += -1
         elif (self.playerTier == "IRON"):
-            total_value += 1000
+            total_value += 0
         elif (self.playerTier == "BRONZE"):
-            total_value += 2000
+            total_value += 400
         elif (self.playerTier == "SILVER"):
-            total_value += 3000
+            total_value += 800
         elif (self.playerTier == "GOLD"):
-            total_value += 4000
+            total_value += 1200
         elif (self.playerTier == "PLATINUM"):
-            total_value += 5000
+            total_value += 1600
         elif (self.playerTier == "DIAMOND"):
-            total_value += 6000
+            total_value += 2000
         elif (self.playerTier == "MASTER"):
-            total_value += 7000
+            total_value += 2400
         elif (self.playerTier == "GRANDMASTER"):
-            total_value += 8000
+            total_value += 2700
             
         if (self.playerRank == "IV"):
-            total_value += 200
+            total_value += 0
         elif (self.playerRank == "III"):
-            total_value += 400
+            total_value += 100
         elif (self.playerRank == "II"):
-            total_value += 600
+            total_value += 200
         elif (self.playerRank == "I"):
-            total_value += 800
+            total_value += 300
             
         total_value += self.playerLP
         

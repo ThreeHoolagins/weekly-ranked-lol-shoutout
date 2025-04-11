@@ -52,6 +52,7 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
         current_datetime = now.strftime(f"%B {day_with_suffix} %Y at %H:%M:%S")
         message = f"## <:questionping:1067913788709421098> Ranked Race Status as of {current_datetime} <:questionping:1067913788709421098>\n```"
         friendsArr = []
+        unranked_players = []
             
         for i in range(0, summonerIds.__len__()):
             url = API_URL2 + f"/lol/league/v4/entries/by-summoner/{summonerIds[i]['id']}"
@@ -59,7 +60,7 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
             if (debugFlag):
                 print(obj)
             if (obj.__len__() == 0):
-                friendsArr.append(ranked_player(FRIENDS_GAME_NAMES[i], "UNRANKED", "UNRANKED", 0))
+                unranked_players.append(FRIENDS_GAME_NAMES[i])
             else:
                 friendsArr.append(ranked_player(FRIENDS_GAME_NAMES[i], obj[0]['tier'], obj[0]['rank'], obj[0]['leaguePoints']))
             time.sleep(.1)
@@ -72,6 +73,17 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
         for player in sorted_players:
             message += player.__repr__()
 
+        unranked_players.sort()
+        if len(unranked_players) > 0:
+            message += "\n"
+
+        if len(unranked_players) > 2:
+            message += ", and ".join(unranked_players) + " are all unranked!\n"
+        elif len(unranked_players) > 1:
+            message += " and ".join(unranked_players) + " are all unranked!\n"
+        else:
+            message += unranked_players[0] + " is unranked!\n"
+        
         message += "```"
         if (debugFlag):
             print(message)
