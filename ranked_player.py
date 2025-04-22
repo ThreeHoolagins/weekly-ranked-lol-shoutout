@@ -20,6 +20,9 @@ class ranked_player:
             return f"{self.playerName} is unranked\n"
         return f"{self.playerName} is {self.playerTier} {self.playerRank}, {self.playerLP} LP\n"
     
+    def __eq__(self, other):
+        return self.playerName == other.playerName and self.playerLP == other.playerLP
+    
     def find_player_value(self):
         total_value = 0
         

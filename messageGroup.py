@@ -1,4 +1,5 @@
 import requests
+import pickle
 import time
 from datetime import datetime
 from data import FRIENDS_GAME_NAMES, FRIENDS_TAG_LINE, DISCORD_CHANNEL_ID
@@ -6,7 +7,18 @@ from ranked_player import ranked_player
 
 API_URL = "https://americas.api.riotgames.com"
 API_URL2 = "https://na1.api.riotgames.com"
+LAST_RUN_FILENAME = "lastMessage.pkl"
 
+def storeData(sorted_players):
+    with open(LAST_RUN_FILENAME, "wb") as lastMessageFile:
+        pickle.dump(sorted_players, lastMessageFile)
+
+def loadData():
+    db = []
+    with open(LAST_RUN_FILENAME, "rb") as lastMessageFile:
+        db = pickle.load(lastMessageFile)
+        
+    return db
 
 def get_day_with_suffix(day):
     if 11 <= day <= 13:
@@ -85,13 +97,16 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
             message += unranked_players[0] + " is unranked!\n"
         
         message += "```"
+        last_sorted_players = loadData()
+
         if (debugFlag):
             print(message)
 
-        if (not debugFlag):
+        if (not debugFlag and sorted_players != last_sorted_players):
             maybeSuccess = requests.post(f"https://discord.com/api/v10/channels/{DISCORD_CHANNEL_ID}/messages", 
                 headers={"Authorization": f"{discord_bot_api_key}"},
                 json={"content": message, "tts": "false"})
+            storeData(sorted_players)
             print(maybeSuccess)
         
     except requests.exceptions.RequestException as e:
