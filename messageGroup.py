@@ -1,5 +1,6 @@
 import requests
 import pickle
+import os
 import time
 from datetime import datetime
 from data import FRIENDS_GAME_NAMES, FRIENDS_TAG_LINE, DISCORD_CHANNEL_ID
@@ -15,10 +16,38 @@ def storeData(sorted_players):
 
 def loadData():
     db = []
-    with open(LAST_RUN_FILENAME, "rb") as lastMessageFile:
-        db = pickle.load(lastMessageFile)
+    if os.path.exists(LAST_RUN_FILENAME):
+        with open(LAST_RUN_FILENAME, "rb") as lastMessageFile:
+            db = pickle.load(lastMessageFile)
         
     return db
+
+def getTimeStamp():
+    now = datetime.now()
+    day_with_suffix = get_day_with_suffix(now.day)
+    return now.strftime(f"%B {day_with_suffix} %Y at %H:%M:%S")
+
+def generateMessage(timestamp, sorted_players, unranked_players):
+    
+    message = f"## <:questionping:1067913788709421098> Ranked Race Status as of {timestamp} <:questionping:1067913788709421098>\n```"
+    message += "\n"
+    for player in sorted_players:
+        message += player.__repr__()
+
+    unranked_players.sort()
+    if len(unranked_players) > 0:
+        message += "\n"
+
+    if len(unranked_players) > 2:
+        message += ", and ".join(unranked_players) + " are all unranked!\n"
+    elif len(unranked_players) > 1:
+        message += " and ".join(unranked_players) + " are all unranked!\n"
+    else:
+        message += unranked_players[0] + " is unranked!\n"
+    
+    message += "```"
+    
+    return message
 
 def get_day_with_suffix(day):
     if 11 <= day <= 13:
@@ -59,10 +88,6 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
         if (debugFlag):
             print()
             
-        now = datetime.now()
-        day_with_suffix = get_day_with_suffix(now.day)
-        current_datetime = now.strftime(f"%B {day_with_suffix} %Y at %H:%M:%S")
-        message = f"## <:questionping:1067913788709421098> Ranked Race Status as of {current_datetime} <:questionping:1067913788709421098>\n```"
         friendsArr = []
         unranked_players = []
             
@@ -80,35 +105,27 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
         if (debugFlag):
             print()
             
-        message += "\n"
         sorted_players = sorted(friendsArr)
-        for player in sorted_players:
-            message += player.__repr__()
-
-        unranked_players.sort()
-        if len(unranked_players) > 0:
-            message += "\n"
-
-        if len(unranked_players) > 2:
-            message += ", and ".join(unranked_players) + " are all unranked!\n"
-        elif len(unranked_players) > 1:
-            message += " and ".join(unranked_players) + " are all unranked!\n"
-        else:
-            message += unranked_players[0] + " is unranked!\n"
+        curr_timestamp = getTimeStamp()
+        message = generateMessage(curr_timestamp, sorted_players, unranked_players)
         
-        message += "```"
         last_sorted_players = loadData()
+        last_message = generateMessage(curr_timestamp, last_sorted_players, unranked_players)
 
         if (debugFlag):
             print(message)
+            print(last_message, last_message == message)
 
-        if (not debugFlag and sorted_players != last_sorted_players):
+        if (not debugFlag and message != last_message):
             maybeSuccess = requests.post(f"https://discord.com/api/v10/channels/{DISCORD_CHANNEL_ID}/messages", 
                 headers={"Authorization": f"{discord_bot_api_key}"},
-                json={"content": message, "tts": "false"})
+                json={"content": message, "tts": "false"})             
             storeData(sorted_players)
             print(maybeSuccess)
+            return 1
+            
+        return -1
         
     except requests.exceptions.RequestException as e:
         print("Error: ", e, e.strerror)
-        return
+        return 0

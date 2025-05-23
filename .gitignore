@@ -2,3 +2,4 @@
 # to avoid leaking sensitive information
 /data.py
 /lastMessage.pkl
+/lastPatchVersion.txt
