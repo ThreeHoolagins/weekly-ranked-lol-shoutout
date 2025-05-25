@@ -1,4 +1,7 @@
 import sys
+import logging
+
+from datetime import datetime
 from messageGroup import messageGroup
 from patchListenerJob import check_for_patch
 
@@ -10,6 +13,14 @@ JOB_SKIPPED_STATUS = "Job Skipped"
 # Arg 2 : Discord Bot Api Key
 # Arg 3 : (Optional) Debug Flag
 def main():
+    LOG = logging.getLogger("pipeline")
+
+    logging.basicConfig(filename=f'logs/runs{datetime.now().strftime("%Y-%m-%d")}.log', 
+        filemode='a',
+        encoding='utf-8', 
+        level=logging.DEBUG,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', 
+        datefmt='%m/%d/%Y %I:%M:%S %p')
     if len(sys.argv) > 2:
         riot_api_key = sys.argv[1]
         discord_bot_api_key = sys.argv[2]
@@ -17,27 +28,29 @@ def main():
         debugFlag = False
         if len(sys.argv) > 3:
             debugFlag = sys.argv[3] == "debug"
+            LOG.info("Debug run started at %s", datetime.now().strftime("%Y/%m/%d %I:%M %p"))
 
         try:
             jobStatusWrapper(messageGroup.__name__, messageGroup(riot_api_key, discord_bot_api_key, debugFlag))
         except:
-            jobStatusWrapper(messageGroup.__name__, 0)            
+            jobStatusWrapper(messageGroup.__name__, 0)
             
         try:
             jobStatusWrapper(check_for_patch.__name__, check_for_patch(riot_api_key, discord_bot_api_key, debugFlag))
         except:
             jobStatusWrapper(check_for_patch.__name__, 0)
     else:
-        print("No Riot Api Key or Discord Api Key Provided")
+        LOG.error("No Riot Api Key or Discord Api Key Provided")
         
 def jobStatusWrapper(jobName, jobResult):
+    LOG = logging.getLogger("pipeline")
     match jobResult:
         case -1:
-            print(f"{jobName} {JOB_SKIPPED_STATUS}")
+            LOG.info(f"{jobName} {JOB_SKIPPED_STATUS}")
         case 0:
-            print(f"{jobName} {JOB_FAILED_STATUS}")
+            LOG.error(f"{jobName} {JOB_FAILED_STATUS}")
         case 1:
-            print(f"{jobName} {JOB_SUCCEEDED_STATUS}")
+            LOG.info(f"{jobName} {JOB_SUCCEEDED_STATUS}")
 
 if __name__ == "__main__":
     main()

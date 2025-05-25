@@ -1,5 +1,6 @@
 import requests
 import os
+import logging
 
 from bs4 import BeautifulSoup
 from data import NEWS_CHANNEL_ID
@@ -38,29 +39,38 @@ def get_readable_patch(patch_id):
     
     return patch_id
 
+def get_patch_notes_url(patch_version):
+    return f'https://www.leagueoflegends.com/en-us/news/game-updates/patch-{patch_version}-notes/'
+
 def get_current_patch_image_uri(patch_version):
-    r = requests.get(f'https://www.leagueoflegends.com/en-us/news/game-updates/patch-{patch_version}-notes/')
+    r = requests.get(get_patch_notes_url(patch_version))
     soup = BeautifulSoup(r.content, "html.parser")
     links = soup.find_all("a", class_="skins cboxElement")
     for link in links:
-        print(link.get("href"))
         return link.get("href")
 
-def check_for_patch(riot_api_key, discord_bot_api_key, debug=False):    
+def check_for_patch(riot_api_key, discord_bot_api_key, debug=False):  
+    LOG = logging.getLogger("patchListenerJob")
+
     previous_patch_id = get_previous_patch()
     current_patch_id = get_current_patch(riot_api_key)
     
     if debug:
-        print(f"Current Patch: '{current_patch_id}', Last Patch: '{previous_patch_id}, Equal? '{current_patch_id == previous_patch_id}'")
+        LOG.debug(f"Current Patch: '{current_patch_id}', Last Patch: '{previous_patch_id}, Equal? '{current_patch_id == previous_patch_id}'")
     
     if previous_patch_id != current_patch_id and not debug:
-        patch_diagram_url = get_current_patch_image_uri(current_patch_id)
+        patch_announcement_message = f"## Patch {current_patch_id} just dropped!\n{get_patch_notes_url(current_patch_id)}\n\n"
+        patch_announcement_message += get_current_patch_image_uri(current_patch_id)
         
+        LOG.info(f"Posting message to discord {patch_announcement_message}")
         postReturn = requests.post(f"https://discord.com/api/v10/channels/{NEWS_CHANNEL_ID}/messages", 
             headers={"Authorization": f"{discord_bot_api_key}"},
-            json={"content": patch_diagram_url, "tts": "false"})
+            json={"content": patch_announcement_message, "tts": "false"})
+        LOG.info(f"Call returned with code {postReturn.status_code}")
         store_previous_patch(current_patch_id)
         if postReturn.status_code == 200:
            return 1
+        else:
+            return 0
     
     return -1

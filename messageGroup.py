@@ -2,6 +2,7 @@ import requests
 import pickle
 import os
 import time
+import logging
 from datetime import datetime
 from data import FRIENDS_GAME_NAMES, FRIENDS_TAG_LINE, DISCORD_CHANNEL_ID
 from ranked_player import ranked_player
@@ -57,6 +58,8 @@ def get_day_with_suffix(day):
         return f"{day}{suffixes.get(day % 10, 'th')}"
 
 def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
+    LOG = logging.getLogger("rankedRaceMessageJob")
+    
     riot_api_headers = {
         "X-Riot-Token": riot_api_key,
         "Accept-Language" : "en-US,en;q=0.9",
@@ -72,21 +75,15 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
             url = API_URL + f"/riot/account/v1/accounts/by-riot-id/{FRIENDS_GAME_NAMES[i]}/{FRIENDS_TAG_LINE[i]}"
             peopleIds.append(requests.get(url, headers=riot_api_headers).json())
             if (debugFlag):
-                print(peopleIds[i])
+                LOG.debug(peopleIds[i])
             time.sleep(.1)
-        
-        if (debugFlag):
-            print()
         
         for i in range(0, peopleIds.__len__()):
             url = API_URL2 + f"/lol/summoner/v4/summoners/by-puuid/{peopleIds[i]['puuid']}"
             summonerIds.append(requests.get(url, headers=riot_api_headers).json())
             if (debugFlag):
-                print(summonerIds[i])
+                LOG.debug(summonerIds[i])
             time.sleep(.1)
-            
-        if (debugFlag):
-            print()
             
         friendsArr = []
         unranked_players = []
@@ -95,15 +92,12 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
             url = API_URL2 + f"/lol/league/v4/entries/by-summoner/{summonerIds[i]['id']}"
             obj = requests.get(API_URL2 + f"/lol/league/v4/entries/by-summoner/{summonerIds[i]['id']}", headers=riot_api_headers).json()
             if (debugFlag):
-                print(obj)
+                LOG.debug(obj)
             if (obj.__len__() == 0):
                 unranked_players.append(FRIENDS_GAME_NAMES[i])
             else:
                 friendsArr.append(ranked_player(FRIENDS_GAME_NAMES[i], obj[0]['tier'], obj[0]['rank'], obj[0]['leaguePoints']))
             time.sleep(.1)
-            
-        if (debugFlag):
-            print()
             
         sorted_players = sorted(friendsArr)
         curr_timestamp = getTimeStamp()
@@ -113,19 +107,20 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
         last_message = generateMessage(curr_timestamp, last_sorted_players, unranked_players)
 
         if (debugFlag):
-            print(message)
-            print(last_message, last_message == message)
+            LOG.debug(message)
+            LOG.debug(last_message)
+            LOG.debug(f"Match? {last_message == message}")
 
         if (not debugFlag and message != last_message):
             maybeSuccess = requests.post(f"https://discord.com/api/v10/channels/{DISCORD_CHANNEL_ID}/messages", 
                 headers={"Authorization": f"{discord_bot_api_key}"},
                 json={"content": message, "tts": "false"})             
             storeData(sorted_players)
-            print(maybeSuccess)
+            LOG.info(maybeSuccess)
             return 1
             
         return -1
         
     except requests.exceptions.RequestException as e:
-        print("Error: ", e, e.strerror)
+        LOG.error("Error: ", e, e.strerror)
         return 0
