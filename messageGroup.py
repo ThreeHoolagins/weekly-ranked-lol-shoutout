@@ -66,9 +66,7 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
         "Accept-Charset": "application/x-www-form-urlencoded; charset=UTF-8",
         "Origin": "https://developer.riotgames.com"
     }
-    
     peopleIds = []
-    summonerIds = []
     
     try:
         for i in range(0, FRIENDS_GAME_NAMES.__len__()):
@@ -77,20 +75,12 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
             if (debugFlag):
                 LOG.debug(peopleIds[i])
             time.sleep(.1)
-        
-        for i in range(0, peopleIds.__len__()):
-            url = API_URL2 + f"/lol/summoner/v4/summoners/by-puuid/{peopleIds[i]['puuid']}"
-            summonerIds.append(requests.get(url, headers=riot_api_headers).json())
-            if (debugFlag):
-                LOG.debug(summonerIds[i])
-            time.sleep(.1)
             
         friendsArr = []
         unranked_players = []
             
-        for i in range(0, summonerIds.__len__()):
-            url = API_URL2 + f"/lol/league/v4/entries/by-summoner/{summonerIds[i]['id']}"
-            obj = requests.get(API_URL2 + f"/lol/league/v4/entries/by-summoner/{summonerIds[i]['id']}", headers=riot_api_headers).json()
+        for i in range(0, peopleIds.__len__()):
+            obj = requests.get(API_URL2 + f"/lol/league/v4/entries/by-puuid/{peopleIds[i]['puuid']}", headers=riot_api_headers).json()
             if (debugFlag):
                 LOG.debug(obj)
             if (obj.__len__() == 0):

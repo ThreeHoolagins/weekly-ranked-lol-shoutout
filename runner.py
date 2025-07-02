@@ -3,7 +3,7 @@ import logging
 
 from datetime import datetime
 from messageGroup import messageGroup
-from patchListenerJob import check_for_patch
+from patchListenerJob import PatchNotPostedException, check_for_patch
 
 JOB_FAILED_STATUS = "Job Failed"
 JOB_SUCCEEDED_STATUS = "Job Succeeded"
@@ -28,7 +28,7 @@ def main():
         debugFlag = False
         if len(sys.argv) > 3:
             debugFlag = sys.argv[3] == "debug"
-            LOG.info("Debug run started at %s", datetime.now().strftime("%Y/%m/%d %I:%M %p"))
+            LOG.info("\n\nDebug run started at %s\n\n", datetime.now().strftime("%Y/%m/%d %I:%M %p"))
 
         try:
             jobStatusWrapper(messageGroup.__name__, messageGroup(riot_api_key, discord_bot_api_key, debugFlag))
@@ -37,7 +37,11 @@ def main():
             
         try:
             jobStatusWrapper(check_for_patch.__name__, check_for_patch(riot_api_key, discord_bot_api_key, debugFlag))
-        except:
+        except PatchNotPostedException as e:
+            print("Patch not found")
+            jobStatusWrapper(check_for_patch.__name__, -1)
+        except Exception as e:
+            print(e)
             jobStatusWrapper(check_for_patch.__name__, 0)
     else:
         LOG.error("No Riot Api Key or Discord Api Key Provided")
