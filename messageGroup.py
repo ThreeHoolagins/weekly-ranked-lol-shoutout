@@ -1,3 +1,4 @@
+import traceback
 import requests
 import pickle
 import os
@@ -5,11 +6,15 @@ import time
 import logging
 from datetime import datetime
 from data import FRIENDS_GAME_NAMES, FRIENDS_TAG_LINE, DISCORD_CHANNEL_ID
+from emailPage import PageError
 from ranked_player import ranked_player
 
 API_URL = "https://americas.api.riotgames.com"
 API_URL2 = "https://na1.api.riotgames.com"
 LAST_RUN_FILENAME = "lastMessage.pkl"
+
+class RiotApiFailedException(Exception):
+    pass
 
 def storeData(sorted_players):
     with open(LAST_RUN_FILENAME, "wb") as lastMessageFile:
@@ -71,7 +76,9 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
     try:
         for i in range(0, FRIENDS_GAME_NAMES.__len__()):
             url = API_URL + f"/riot/account/v1/accounts/by-riot-id/{FRIENDS_GAME_NAMES[i]}/{FRIENDS_TAG_LINE[i]}"
-            peopleIds.append(requests.get(url, headers=riot_api_headers).json())
+            response = requests.get(url, headers=riot_api_headers)
+            response.raise_for_status()
+            peopleIds.append(response.json())
             if (debugFlag):
                 LOG.debug(peopleIds[i])
             time.sleep(.1)
@@ -80,7 +87,11 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
         unranked_players = []
             
         for i in range(0, peopleIds.__len__()):
-            obj = requests.get(API_URL2 + f"/lol/league/v4/entries/by-puuid/{peopleIds[i]['puuid']}", headers=riot_api_headers).json()
+            url = API_URL2 + f"/lol/league/v4/entries/by-puuid/{peopleIds[i]['puuid']}"
+            response = requests.get(url, headers=riot_api_headers)
+            response.raise_for_status()
+            obj = response.json()
+            
             if (debugFlag):
                 LOG.debug(obj)
             if (obj.__len__() == 0):
@@ -102,15 +113,17 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
             LOG.debug(f"Match? {last_message == message}")
 
         if (not debugFlag and message != last_message):
-            maybeSuccess = requests.post(f"https://discord.com/api/v10/channels/{DISCORD_CHANNEL_ID}/messages", 
+            response = requests.post(f"https://discord.com/api/v10/channels/{DISCORD_CHANNEL_ID}/messages", 
                 headers={"Authorization": f"{discord_bot_api_key}"},
-                json={"content": message, "tts": "false"})             
+                json={"content": message, "tts": "false"})         
+            response.raise_for_status()
             storeData(sorted_players)
-            LOG.info(maybeSuccess)
+            LOG.info(response)
             return 1
             
         return -1
         
     except requests.exceptions.RequestException as e:
         LOG.error("Error: ", e, e.strerror)
+        PageError(traceback.format_exc())
         return 0

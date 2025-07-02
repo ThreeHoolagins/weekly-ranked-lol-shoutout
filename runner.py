@@ -2,6 +2,8 @@ import sys
 import logging
 
 from datetime import datetime
+import traceback
+from emailPage import PageError
 from messageGroup import messageGroup
 from patchListenerJob import PatchNotPostedException, check_for_patch
 
@@ -33,6 +35,7 @@ def main():
         try:
             jobStatusWrapper(messageGroup.__name__, messageGroup(riot_api_key, discord_bot_api_key, debugFlag))
         except:
+            PageError(traceback.format_exc())
             jobStatusWrapper(messageGroup.__name__, 0)
             
         try:
@@ -42,6 +45,7 @@ def main():
             jobStatusWrapper(check_for_patch.__name__, -1)
         except Exception as e:
             print(e)
+            PageError(traceback.format_exc())
             jobStatusWrapper(check_for_patch.__name__, 0)
     else:
         LOG.error("No Riot Api Key or Discord Api Key Provided")

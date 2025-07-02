@@ -22,17 +22,6 @@ def store_previous_patch(current_patch):
         open(LAST_RUN_FILENAME, "x")
     with open(LAST_RUN_FILENAME, "w") as lastVersioneFile:
         lastVersioneFile.write(current_patch)
-        
-# def get_current_patch(riot_api_key):
-#     riot_api_headers = {
-#         "X-Riot-Token": riot_api_key,
-#         "Accept-Language" : "en-US,en;q=0.9",
-#         "Accept-Charset": "application/x-www-form-urlencoded; charset=UTF-8",
-#         "Origin": "https://developer.riotgames.com"
-#     }
-
-#     patch_list = requests.get(DATA_DRAGON_VERSIONS_URL, headers=riot_api_headers).json()
-#     return get_readable_patch(patch_list[0])
 
 def guess_next_patch(last_patch):
     patch_parts = last_patch.split("-")
@@ -43,13 +32,6 @@ def guess_next_patch(last_patch):
         patch_parts[1] = "1"
     
     return "-".join(patch_parts)
-    
-# def get_readable_patch(patch_id):
-#     patch_id_split = patch_id.split(".")
-#     if (patch_id_split[0] == "15"):
-#         return f"25-{patch_id_split[1]}"
-    
-#     return patch_id
 
 def get_patch_notes_url(patch_version):
     return f'https://www.leagueoflegends.com/en-us/news/game-updates/patch-{patch_version}-notes/'
@@ -70,7 +52,6 @@ def check_for_patch(riot_api_key, discord_bot_api_key, debug=False):
     LOG.info("Test log")
     guess_patch_id = guess_next_patch(previous_patch_id)
     LOG.debug(f"Patch guess: {guess_patch_id}")
-    # current_patch_id = get_current_patch(riot_api_key)
     
     if debug:
         LOG.debug(f"Guess Patch: '{guess_patch_id}', Last Patch: '{previous_patch_id}, Equal? '{guess_patch_id == previous_patch_id}'")
