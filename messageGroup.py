@@ -38,7 +38,7 @@ def generateMessage(timestamp, sorted_players, unranked_players):
     message = f"## <:questionping:1067913788709421098> Ranked Race Status as of {timestamp} <:questionping:1067913788709421098>\n```"
     message += "\n"
     for player in sorted_players:
-        message += player.__repr__()
+        message += player.__repr__(sorted_players[0].find_player_value())
 
     unranked_players.sort()
     if len(unranked_players) > 0:

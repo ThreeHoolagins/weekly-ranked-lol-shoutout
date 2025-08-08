@@ -15,10 +15,14 @@ class ranked_player:
         else:
             return True
         
-    def __repr__(self):
+    def __repr__(self, top_rank_lp = 0):
         if (self.playerTier == "UNRANKED"):
             return f"{self.playerName} is unranked\n"
-        return f"{self.playerName} is {self.playerTier} {self.playerRank}, {self.playerLP} LP\n"
+        if top_rank_lp == 0 or top_rank_lp - self.find_player_value() == 0:
+            return f"{self.playerName} is {self.playerTier} {self.playerRank}, {self.playerLP} LP, and is the leader!\n"
+        else:
+            return f"{self.playerName} is {self.playerTier} {self.playerRank}, {self.playerLP} LP. {top_rank_lp - self.find_player_value()} LP behind the leader!\n"
+            
     
     def __eq__(self, other):
         return self.playerName == other.playerName and self.playerLP == other.playerLP
