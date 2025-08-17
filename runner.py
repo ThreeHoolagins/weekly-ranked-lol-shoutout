@@ -3,6 +3,7 @@ import logging
 
 from datetime import datetime
 import traceback
+from data import DISCORD_BOT_KEY, RIOT_API_KEY
 from emailPage import PageError
 from messageGroup import messageGroup
 from patchListenerJob import PatchNotPostedException, check_for_patch
@@ -25,8 +26,7 @@ def main():
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', 
         datefmt='%m/%d/%Y %I:%M:%S %p')
     if len(sys.argv) > 2:
-        riot_api_key = sys.argv[1]
-        discord_bot_api_key = sys.argv[2]
+        discord_bot_api_key = DISCORD_BOT_KEY
         
         debugFlag = False
         if len(sys.argv) > 3:
@@ -34,24 +34,26 @@ def main():
             LOG.info("\n\nDebug run started at %s\n\n", datetime.now().strftime("%Y/%m/%d %I:%M %p"))
 
         try:
-            jobStatusWrapper(messageGroup.__name__, messageGroup(riot_api_key, discord_bot_api_key, debugFlag))
+            jobStatusWrapper(messageGroup.__name__, messageGroup(RIOT_API_KEY, DISCORD_BOT_KEY, debugFlag))
         except:
+            LOG.error(traceback.format_exc())
             PageError(traceback.format_exc())
             jobStatusWrapper(messageGroup.__name__, 0)
             
         try:
-            jobStatusWrapper(check_for_patch.__name__, check_for_patch(riot_api_key, discord_bot_api_key, debugFlag))
+            jobStatusWrapper(check_for_patch.__name__, check_for_patch(RIOT_API_KEY, DISCORD_BOT_KEY, debugFlag))
         except PatchNotPostedException as e:
-            print("Patch not found")
+            LOG.info("Patch Not Found")
             jobStatusWrapper(check_for_patch.__name__, -1)
         except Exception as e:
-            print(e)
+            LOG.error(traceback.format_exc())
             PageError(traceback.format_exc())
             jobStatusWrapper(check_for_patch.__name__, 0)
             
         try:
             jobStatusWrapper(skinLineDataJob.__name__, skinLineDataJob())
         except:
+            LOG.error(traceback.format_exc())
             PageError(traceback.format_exc())
             jobStatusWrapper(skinLineDataJob.__name__, 0)
             

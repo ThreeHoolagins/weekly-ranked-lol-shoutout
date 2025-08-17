@@ -75,7 +75,7 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
     
     try:
         for i in range(0, FRIENDS_GAME_NAMES.__len__()):
-            url =  + f"{LOL_AMERICA_REGION_URL}/riot/account/v1/accounts/by-riot-id/{FRIENDS_GAME_NAMES[i]}/{FRIENDS_TAG_LINE[i]}"
+            url = f"{LOL_AMERICA_REGION_URL}/riot/account/v1/accounts/by-riot-id/{FRIENDS_GAME_NAMES[i]}/{FRIENDS_TAG_LINE[i]}"
             response = requests.get(url, headers=riot_api_headers)
             response.raise_for_status()
             peopleIds.append(response.json())
