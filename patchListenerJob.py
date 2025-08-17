@@ -5,7 +5,6 @@ import logging
 from bs4 import BeautifulSoup
 from data import NEWS_CHANNEL_ID
 
-DATA_DRAGON_VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json"
 LAST_RUN_FILENAME = "./lastPatchVersion.txt"
 
 class PatchNotPostedException(Exception):

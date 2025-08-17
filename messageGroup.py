@@ -6,11 +6,11 @@ import time
 import logging
 from datetime import datetime
 from data import FRIENDS_GAME_NAMES, FRIENDS_TAG_LINE, DISCORD_CHANNEL_ID
+from discordApiConstants import DISCORD_API_URL
 from emailPage import PageError
 from ranked_player import ranked_player
+from riotApiConstants import LOL_AMERICA_REGION_URL, LOL_NA1_PLATFORM_API_URL
 
-API_URL = "https://americas.api.riotgames.com"
-API_URL2 = "https://na1.api.riotgames.com"
 LAST_RUN_FILENAME = "lastMessage.pkl"
 
 class RiotApiFailedException(Exception):
@@ -75,7 +75,7 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
     
     try:
         for i in range(0, FRIENDS_GAME_NAMES.__len__()):
-            url = API_URL + f"/riot/account/v1/accounts/by-riot-id/{FRIENDS_GAME_NAMES[i]}/{FRIENDS_TAG_LINE[i]}"
+            url =  + f"{LOL_AMERICA_REGION_URL}/riot/account/v1/accounts/by-riot-id/{FRIENDS_GAME_NAMES[i]}/{FRIENDS_TAG_LINE[i]}"
             response = requests.get(url, headers=riot_api_headers)
             response.raise_for_status()
             peopleIds.append(response.json())
@@ -87,7 +87,7 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
         unranked_players = []
             
         for i in range(0, peopleIds.__len__()):
-            url = API_URL2 + f"/lol/league/v4/entries/by-puuid/{peopleIds[i]['puuid']}"
+            url = f"{LOL_NA1_PLATFORM_API_URL}/lol/league/v4/entries/by-puuid/{peopleIds[i]['puuid']}"
             response = requests.get(url, headers=riot_api_headers)
             response.raise_for_status()
             obj = response.json()
@@ -113,7 +113,7 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
             LOG.debug(f"Match? {last_message == message}")
 
         if (not debugFlag and message != last_message):
-            response = requests.post(f"https://discord.com/api/v10/channels/{DISCORD_CHANNEL_ID}/messages", 
+            response = requests.post(f"{DISCORD_API_URL}/v10/channels/{DISCORD_CHANNEL_ID}/messages", 
                 headers={"Authorization": f"{discord_bot_api_key}"},
                 json={"content": message, "tts": "false"})         
             response.raise_for_status()

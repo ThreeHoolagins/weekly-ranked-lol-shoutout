@@ -6,6 +6,7 @@ import traceback
 from emailPage import PageError
 from messageGroup import messageGroup
 from patchListenerJob import PatchNotPostedException, check_for_patch
+from skinDataJob import skinLineDataJob
 
 JOB_FAILED_STATUS = "Job Failed"
 JOB_SUCCEEDED_STATUS = "Job Succeeded"
@@ -47,6 +48,13 @@ def main():
             print(e)
             PageError(traceback.format_exc())
             jobStatusWrapper(check_for_patch.__name__, 0)
+            
+        try:
+            jobStatusWrapper(skinLineDataJob.__name__, skinLineDataJob())
+        except:
+            PageError(traceback.format_exc())
+            jobStatusWrapper(skinLineDataJob.__name__, 0)
+            
     else:
         LOG.error("No Riot Api Key or Discord Api Key Provided")
         
