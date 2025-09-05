@@ -4,6 +4,6 @@
 
 # How to run
 
-'''
+```
 python runner.py {optional: debug}
-'''
+```
