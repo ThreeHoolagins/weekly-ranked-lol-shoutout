@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import pickle
-import pprint
 import requests
 
 from riotApiConstants import DATA_DRAGON_URL, DATA_DRAGON_VERSIONS_URL

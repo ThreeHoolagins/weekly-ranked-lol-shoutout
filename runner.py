@@ -25,40 +25,35 @@ def main():
         level=logging.DEBUG,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', 
         datefmt='%m/%d/%Y %I:%M:%S %p')
-    if len(sys.argv) > 2:
-        discord_bot_api_key = DISCORD_BOT_KEY
         
-        debugFlag = False
-        if len(sys.argv) > 3:
-            debugFlag = sys.argv[3] == "debug"
-            LOG.info("\n\nDebug run started at %s\n\n", datetime.now().strftime("%Y/%m/%d %I:%M %p"))
+    debugFlag = False
+    if len(sys.argv) > 1:
+        debugFlag = sys.argv[1] == "debug"
+        LOG.info("\n\nDebug run started at %s\n\n", datetime.now().strftime("%Y/%m/%d %I:%M %p"))
 
-        try:
-            jobStatusWrapper(messageGroup.__name__, messageGroup(RIOT_API_KEY, DISCORD_BOT_KEY, debugFlag))
-        except:
-            LOG.error(traceback.format_exc())
-            PageError(traceback.format_exc())
-            jobStatusWrapper(messageGroup.__name__, 0)
-            
-        try:
-            jobStatusWrapper(check_for_patch.__name__, check_for_patch(RIOT_API_KEY, DISCORD_BOT_KEY, debugFlag))
-        except PatchNotPostedException as e:
-            LOG.info("Patch Not Found")
-            jobStatusWrapper(check_for_patch.__name__, -1)
-        except Exception as e:
-            LOG.error(traceback.format_exc())
-            PageError(traceback.format_exc())
-            jobStatusWrapper(check_for_patch.__name__, 0)
-            
-        try:
-            jobStatusWrapper(skinLineDataJob.__name__, skinLineDataJob())
-        except:
-            LOG.error(traceback.format_exc())
-            PageError(traceback.format_exc())
-            jobStatusWrapper(skinLineDataJob.__name__, 0)
-            
-    else:
-        LOG.error("No Riot Api Key or Discord Api Key Provided")
+    try:
+        jobStatusWrapper(messageGroup.__name__, messageGroup(RIOT_API_KEY, DISCORD_BOT_KEY, debugFlag))
+    except:
+        LOG.error(traceback.format_exc())
+        PageError(traceback.format_exc())
+        jobStatusWrapper(messageGroup.__name__, 0)
+        
+    try:
+        jobStatusWrapper(check_for_patch.__name__, check_for_patch(RIOT_API_KEY, DISCORD_BOT_KEY, debugFlag))
+    except PatchNotPostedException as e:
+        LOG.info("Patch Not Found")
+        jobStatusWrapper(check_for_patch.__name__, -1)
+    except Exception as e:
+        LOG.error(traceback.format_exc())
+        PageError(traceback.format_exc())
+        jobStatusWrapper(check_for_patch.__name__, 0)
+        
+    try:
+        jobStatusWrapper(skinLineDataJob.__name__, skinLineDataJob())
+    except:
+        LOG.error(traceback.format_exc())
+        PageError(traceback.format_exc())
+        jobStatusWrapper(skinLineDataJob.__name__, 0)
         
 def jobStatusWrapper(jobName, jobResult):
     LOG = logging.getLogger("pipeline")
