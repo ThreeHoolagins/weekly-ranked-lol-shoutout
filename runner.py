@@ -7,7 +7,6 @@ from data import DISCORD_BOT_KEY, RIOT_API_KEY
 from emailPage import PageError
 from messageGroup import messageGroup
 from patchListenerJob import PatchNotPostedException, check_for_patch
-from skinDataJob import skinLineDataJob
 
 JOB_FAILED_STATUS = "Job Failed"
 JOB_SUCCEEDED_STATUS = "Job Succeeded"
@@ -19,13 +18,13 @@ JOB_SKIPPED_STATUS = "Job Skipped"
 def main():
     LOG = logging.getLogger("pipeline")
 
-    logging.basicConfig(filename=f'logs/runs{datetime.now().strftime("%Y-%m-%d")}.log', 
+    logging.basicConfig(filename=f'logs/runs{datetime.now().strftime("%Y-%m-%d")}.log',
         filemode='a',
-        encoding='utf-8', 
+        encoding='utf-8',
         level=logging.DEBUG,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', 
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%m/%d/%Y %I:%M:%S %p')
-        
+
     debugFlag = False
     if len(sys.argv) > 1:
         debugFlag = sys.argv[1] == "debug"
@@ -37,7 +36,7 @@ def main():
         LOG.error(traceback.format_exc())
         PageError(traceback.format_exc())
         jobStatusWrapper(messageGroup.__name__, 0)
-        
+
     try:
         jobStatusWrapper(check_for_patch.__name__, check_for_patch(RIOT_API_KEY, DISCORD_BOT_KEY, debugFlag))
     except PatchNotPostedException as e:
@@ -47,14 +46,7 @@ def main():
         LOG.error(traceback.format_exc())
         PageError(traceback.format_exc())
         jobStatusWrapper(check_for_patch.__name__, 0)
-        
-    try:
-        jobStatusWrapper(skinLineDataJob.__name__, skinLineDataJob())
-    except:
-        LOG.error(traceback.format_exc())
-        PageError(traceback.format_exc())
-        jobStatusWrapper(skinLineDataJob.__name__, 0)
-        
+
 def jobStatusWrapper(jobName, jobResult):
     LOG = logging.getLogger("pipeline")
     match jobResult:

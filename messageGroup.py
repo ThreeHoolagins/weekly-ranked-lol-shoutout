@@ -5,7 +5,7 @@ import os
 import time
 import logging
 from datetime import datetime
-from data import FRIENDS_GAME_NAMES, FRIENDS_TAG_LINE, DISCORD_CHANNEL_ID
+from data import FRIENDS_GAME_NAMES, FRIENDS_TAG_LINE, DISCORD_CHANNEL_ID, HOST_USER_ID
 from discordApiConstants import DISCORD_API_URL
 from emailPage import PageError
 from ranked_player import ranked_player
@@ -62,6 +62,18 @@ def get_day_with_suffix(day):
         suffixes = {1: 'st', 2: 'nd', 3: 'rd'}
         return f"{day}{suffixes.get(day % 10, 'th')}"
 
+def dmHost(discord_bot_api_key, content):
+    try:
+        dm_response = requests.post(f"{DISCORD_API_URL}/v10/users/@me/channels",
+            headers={"Authorization": f"{discord_bot_api_key}"},
+            json={"recipient_id": HOST_USER_ID})
+        dm_response.raise_for_status()
+        requests.post(f"{DISCORD_API_URL}/v10/channels/{dm_response.json()['id']}/messages",
+            headers={"Authorization": f"{discord_bot_api_key}"},
+            json={"content": content, "tts": False})
+    except requests.exceptions.RequestException:
+        pass
+
 def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
     LOG = logging.getLogger("rankedRaceMessageJob")
     
@@ -111,6 +123,7 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
             LOG.debug(message)
             LOG.debug(last_message)
             LOG.debug(f"Match? {last_message == message}")
+            dmHost(discord_bot_api_key, message)
 
         if (not debugFlag and message != last_message):
             response = requests.post(f"{DISCORD_API_URL}/v10/channels/{DISCORD_CHANNEL_ID}/messages", 

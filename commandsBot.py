@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 from data import DISCORD_BOT_KEY_NO_BOT
 from lolCalculator import lolCalculator
-from playerDataHandler import init_database
 
 intents = discord.Intents.default()
 intents.message_content = True # Required to read message content for prefix commands
@@ -33,5 +32,4 @@ async def on_command_error(ctx, error):
         print(f"Unhandled error: {error}")
         await ctx.send("An unexpected error occurred. Please try again later.")
     
-init_database()
 bot.run(DISCORD_BOT_KEY_NO_BOT)
