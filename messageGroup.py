@@ -28,6 +28,37 @@ def loadData():
         
     return db
 
+def has_data_changed(new_players, old_players):
+    if not old_players:
+        return bool(new_players)
+    old_by_name = {p.playerName: p for p in old_players}
+    new_by_name = {p.playerName: p for p in new_players}
+    for name, player in new_by_name.items():
+        if name not in old_by_name or player != old_by_name[name]:
+            return True
+    for name in old_by_name:
+        if name not in new_by_name:
+            return True
+    return False
+
+def describe_changes(new_players, old_players):
+    lines = []
+    old_by_name = {p.playerName: p for p in old_players}
+    new_by_name = {p.playerName: p for p in new_players}
+    all_names = sorted(set(old_by_name) | set(new_by_name))
+    for name in all_names:
+        old_p = old_by_name.get(name)
+        new_p = new_by_name.get(name)
+        if old_p is None:
+            lines.append(f"  {name}: NEW (was unranked/absent)")
+        elif new_p is None:
+            lines.append(f"  {name}: REMOVED (now unranked/absent, was {old_p.playerTier} {old_p.playerRank} {old_p.playerLP} LP)")
+        elif old_p != new_p:
+            lines.append(f"  {name}: CHANGED (was {old_p.playerTier} {old_p.playerRank} {old_p.playerLP} LP, now {new_p.playerTier} {new_p.playerRank} {new_p.playerLP} LP)")
+        else:
+            lines.append(f"  {name}: unchanged ({new_p.playerTier} {new_p.playerRank} {new_p.playerLP} LP)")
+    return "\n".join(lines)
+
 def getTimeStamp():
     now = datetime.now()
     day_with_suffix = get_day_with_suffix(now.day)
@@ -114,18 +145,26 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
             
         sorted_players = sorted(friendsArr)
         curr_timestamp = getTimeStamp()
-        message = generateMessage(curr_timestamp, sorted_players, unranked_players)
         
         last_sorted_players = loadData()
-        last_message = generateMessage(curr_timestamp, last_sorted_players, unranked_players)
+        changed = has_data_changed(sorted_players, last_sorted_players)
 
-        if (debugFlag):
-            LOG.debug(message)
-            LOG.debug(last_message)
-            LOG.debug(f"Match? {last_message == message}")
+        if debugFlag:
+            LOG.debug("--- New player data ---")
+            for p in sorted_players:
+                LOG.debug(f"  {p.playerName}: {p.playerTier} {p.playerRank} {p.playerLP} LP")
+            LOG.debug("--- Old player data ---")
+            for p in last_sorted_players:
+                LOG.debug(f"  {p.playerName}: {p.playerTier} {p.playerRank} {p.playerLP} LP")
+            LOG.debug(f"--- Changes detected: {changed} ---")
+            LOG.debug("\n" + describe_changes(sorted_players, last_sorted_players))
+            
+            message = generateMessage(curr_timestamp, sorted_players, unranked_players)
+            LOG.debug(f"--- Generated message ---\n{message}")
             dmHost(discord_bot_api_key, message)
 
-        if (not debugFlag and message != last_message):
+        if (not debugFlag and changed):
+            message = generateMessage(curr_timestamp, sorted_players, unranked_players)
             response = requests.post(f"{DISCORD_API_URL}/v10/channels/{DISCORD_CHANNEL_ID}/messages", 
                 headers={"Authorization": f"{discord_bot_api_key}"},
                 json={"content": message, "tts": "false"})         
@@ -133,6 +172,7 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
             storeData(sorted_players)
             LOG.info(response)
             return 1
+            
             
         return -1
         
