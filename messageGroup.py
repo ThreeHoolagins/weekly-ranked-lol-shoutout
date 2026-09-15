@@ -64,12 +64,14 @@ def getTimeStamp():
     day_with_suffix = get_day_with_suffix(now.day)
     return now.strftime(f"%B {day_with_suffix} %Y at %H:%M:%S")
 
-def generateMessage(timestamp, sorted_players, unranked_players):
+def generateMessage(timestamp, sorted_players, unranked_players, last_sorted_players=None):
     
-    message = f"## <:questionping:1067913788709421098> Ranked Race Status as of {timestamp} <:questionping:1067913788709421098>\n```"
-    message += "\n"
+    message = f"## <:questionping:1067913788709421098> Ranked Race Status as of {timestamp} <:questionping:1067913788709421098>\n```ansi\n"
+    
+    old_by_name = {p.playerName: p for p in (last_sorted_players or [])}
+    
     for player in sorted_players:
-        message += player.__repr__(sorted_players[0].find_player_value())
+        message += player.__repr__(sorted_players[0].find_player_value(), old_by_name.get(player.playerName))
 
     unranked_players.sort()
     if len(unranked_players) > 0:
@@ -159,12 +161,12 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
             LOG.debug(f"--- Changes detected: {changed} ---")
             LOG.debug("\n" + describe_changes(sorted_players, last_sorted_players))
             
-            message = generateMessage(curr_timestamp, sorted_players, unranked_players)
+            message = generateMessage(curr_timestamp, sorted_players, unranked_players, last_sorted_players)
             LOG.debug(f"--- Generated message ---\n{message}")
             dmHost(discord_bot_api_key, message)
 
         if (not debugFlag and changed):
-            message = generateMessage(curr_timestamp, sorted_players, unranked_players)
+            message = generateMessage(curr_timestamp, sorted_players, unranked_players, last_sorted_players)
             response = requests.post(f"{DISCORD_API_URL}/v10/channels/{DISCORD_CHANNEL_ID}/messages", 
                 headers={"Authorization": f"{discord_bot_api_key}"},
                 json={"content": message, "tts": "false"})         

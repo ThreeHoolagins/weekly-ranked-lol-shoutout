@@ -15,13 +15,26 @@ class ranked_player:
         else:
             return True
         
-    def __repr__(self, top_rank_lp = 0):
+    def __repr__(self, top_rank_lp=0, old_player=None):
+        if old_player is not None and self.playerName != old_player.playerName:
+            raise ValueError(
+                f"Player name mismatch in __repr__: "
+                f"current '{self.playerName}' != old '{old_player.playerName}'"
+            )
+
+        if old_player is None or self.find_player_value() == old_player.find_player_value():
+            symbol = "\u2013"
+        elif self.find_player_value() > old_player.find_player_value():
+            symbol = "\u001b[1;32m\u25b2\u001b[0m"
+        else:
+            symbol = "\u001b[1;31m\u25bc\u001b[0m"
+
         if (self.playerTier == "UNRANKED"):
             return f"{self.playerName} is unranked\n"
         if top_rank_lp == 0 or top_rank_lp - self.find_player_value() == 0:
-            return f"{self.playerName} is {self.playerTier} {self.playerRank}, {self.playerLP} LP, and is the leader!\n"
+            return f"{symbol} {self.playerName} is {self.playerTier} {self.playerRank}, {self.playerLP} LP, and is the leader!\n"
         else:
-            return f"{self.playerName} is {self.playerTier} {self.playerRank}, {self.playerLP} LP. {top_rank_lp - self.find_player_value()} LP behind the leader!\n"
+            return f"{symbol} {self.playerName} is {self.playerTier} {self.playerRank}, {self.playerLP} LP. {top_rank_lp - self.find_player_value()} LP behind the leader!\n"
             
     
     def __eq__(self, other):
