@@ -79,7 +79,7 @@ def generateMessage(timestamp, sorted_players, unranked_players):
         message += ", and ".join(unranked_players) + " are all unranked!\n"
     elif len(unranked_players) > 1:
         message += " and ".join(unranked_players) + " are all unranked!\n"
-    else:
+    elif len(unranked_players) == 1:
         message += unranked_players[0] + " is unranked!\n"
     
     message += "```"
