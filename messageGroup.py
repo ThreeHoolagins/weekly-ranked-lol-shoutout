@@ -149,6 +149,11 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
         curr_timestamp = getTimeStamp()
         
         last_sorted_players = loadData()
+        if debugFlag and len(sorted_players) > 0:
+            sorted_players[0].playerLP += 1
+            if len(sorted_players) > 1:
+                sorted_players[-1].playerLP -= 1
+            LOG.debug("--- Debug LP manipulation applied (top +1, bottom -1) ---")
         changed = has_data_changed(sorted_players, last_sorted_players)
 
         if debugFlag:
