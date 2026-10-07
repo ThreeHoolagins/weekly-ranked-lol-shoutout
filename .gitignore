@@ -1,5 +1,7 @@
 /__pycache__
 # to avoid leaking sensitive information
+/.env
+/players.toml
 /data.py
 /lastMessage.pkl
 /lastPatchVersion.txt

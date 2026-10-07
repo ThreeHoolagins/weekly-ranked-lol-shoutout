@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from data import DISCORD_BOT_KEY_NO_BOT
+from config import DISCORD_BOT_TOKEN
 from lolCalculator import lolCalculator
 
 intents = discord.Intents.default()
@@ -32,4 +32,4 @@ async def on_command_error(ctx, error):
         print(f"Unhandled error: {error}")
         await ctx.send("An unexpected error occurred. Please try again later.")
     
-bot.run(DISCORD_BOT_KEY_NO_BOT)
+bot.run(DISCORD_BOT_TOKEN)

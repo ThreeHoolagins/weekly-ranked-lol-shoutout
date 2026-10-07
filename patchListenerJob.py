@@ -3,7 +3,7 @@ import os
 import logging
 
 from bs4 import BeautifulSoup
-from data import NEWS_CHANNEL_ID
+from config import NEWS_CHANNEL_ID
 
 LAST_RUN_FILENAME = "./lastPatchVersion.txt"
 

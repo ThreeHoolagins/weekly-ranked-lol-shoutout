@@ -3,7 +3,7 @@ import smtplib
 from email.message import EmailMessage
 import traceback
 
-from data import PROJECT_EMAIL, PERSONAL_EMAIL, PROJECT_EMAIL_APP_PASSWORD
+from config import PROJECT_EMAIL, PERSONAL_EMAIL, PROJECT_EMAIL_APP_PASSWORD
 
 def generateMessage(exception_message):
     msg = EmailMessage()

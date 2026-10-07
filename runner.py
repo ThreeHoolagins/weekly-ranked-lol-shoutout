@@ -3,7 +3,7 @@ import logging
 
 from datetime import datetime
 import traceback
-from data import DISCORD_BOT_KEY, RIOT_API_KEY
+from config import DISCORD_BOT_KEY, RIOT_API_KEY
 from emailPage import PageError
 from messageGroup import messageGroup
 from patchListenerJob import PatchNotPostedException, check_for_patch

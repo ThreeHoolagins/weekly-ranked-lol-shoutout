@@ -2,7 +2,7 @@ import time
 from datetime import datetime
 import requests
 
-from data import RIOT_API_KEY
+from config import RIOT_API_KEY
 from riotApiConstants import LOL_AMERICA_REGION_URL, LOL_NA1_PLATFORM_API_URL
 
 class lolCalculator:
