@@ -1,54 +1,63 @@
 import traceback
 import requests
-import pickle
+import json
 import os
 import time
+import tomllib
 import logging
 from datetime import datetime
-from data import FRIENDS_GAME_NAMES, FRIENDS_TAG_LINE, DISCORD_CHANNEL_ID, HOST_USER_ID
+from config import DISCORD_CHANNEL_ID, HOST_USER_ID
 from discordApiConstants import DISCORD_API_URL
 from emailPage import PageError
 from ranked_player import ranked_player
 from riotApiConstants import LOL_AMERICA_REGION_URL, LOL_NA1_PLATFORM_API_URL
 
-LAST_RUN_FILENAME = "lastMessage.pkl"
+PLAYERS_FILENAME = "players.toml"
+STATE_FILENAME = "./data/state.json"
 
 class RiotApiFailedException(Exception):
     pass
 
-def storeData(sorted_players):
-    with open(LAST_RUN_FILENAME, "wb") as lastMessageFile:
-        pickle.dump(sorted_players, lastMessageFile)
+# state.json is written by the job, never by hand. It's keyed by puuid so
+# history survives Riot ID changes, and it caches puuids to skip account lookups:
+# { puuid: { "riot_id": "Name#Tag", "tier": ..., "rank": ..., "lp": ... } }
+# Unranked players only have "riot_id".
+def storeState(state):
+    with open(STATE_FILENAME, "w", encoding="utf-8") as stateFile:
+        json.dump(state, stateFile, indent=2)
 
-def loadData():
-    db = []
-    if os.path.exists(LAST_RUN_FILENAME):
-        with open(LAST_RUN_FILENAME, "rb") as lastMessageFile:
-            db = pickle.load(lastMessageFile)
-        
-    return db
+def loadState():
+    if not os.path.exists(STATE_FILENAME):
+        return {}
+    with open(STATE_FILENAME, "r", encoding="utf-8") as stateFile:
+        return json.load(stateFile)
+
+def rankedPlayersFromState(state):
+    return [ranked_player(puuid, entry["riot_id"].split("#")[0], entry["tier"], entry["rank"], entry["lp"])
+            for puuid, entry in state.items() if "tier" in entry]
 
 def has_data_changed(new_players, old_players):
     if not old_players:
         return bool(new_players)
-    old_by_name = {p.playerName: p for p in old_players}
-    new_by_name = {p.playerName: p for p in new_players}
-    for name, player in new_by_name.items():
-        if name not in old_by_name or player != old_by_name[name]:
+    old_by_id = {p.puuid: p for p in old_players}
+    new_by_id = {p.puuid: p for p in new_players}
+    for puuid, player in new_by_id.items():
+        if puuid not in old_by_id or player != old_by_id[puuid]:
             return True
-    for name in old_by_name:
-        if name not in new_by_name:
+    for puuid in old_by_id:
+        if puuid not in new_by_id:
             return True
     return False
 
 def describe_changes(new_players, old_players):
     lines = []
-    old_by_name = {p.playerName: p for p in old_players}
-    new_by_name = {p.playerName: p for p in new_players}
-    all_names = sorted(set(old_by_name) | set(new_by_name))
-    for name in all_names:
-        old_p = old_by_name.get(name)
-        new_p = new_by_name.get(name)
+    old_by_id = {p.puuid: p for p in old_players}
+    new_by_id = {p.puuid: p for p in new_players}
+    all_players = sorted(({**old_by_id, **new_by_id}).items(), key=lambda item: item[1].playerName)
+    for puuid, player in all_players:
+        old_p = old_by_id.get(puuid)
+        new_p = new_by_id.get(puuid)
+        name = player.playerName
         if old_p is None:
             lines.append(f"  {name}: NEW (was unranked/absent)")
         elif new_p is None:
@@ -68,10 +77,10 @@ def generateMessage(timestamp, sorted_players, unranked_players, last_sorted_pla
     
     message = f"## <:questionping:1067913788709421098> Ranked Race Status as of {timestamp} <:questionping:1067913788709421098>\n```ansi\n"
     
-    old_by_name = {p.playerName: p for p in (last_sorted_players or [])}
-    
+    old_by_id = {p.puuid: p for p in (last_sorted_players or [])}
+
     for player in sorted_players:
-        message += player.__repr__(sorted_players[0].find_player_value(), old_by_name.get(player.playerName))
+        message += player.__repr__(sorted_players[0].find_player_value(), old_by_id.get(player.puuid))
 
     unranked_players.sort()
     if len(unranked_players) > 0:
@@ -116,39 +125,50 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
         "Accept-Charset": "application/x-www-form-urlencoded; charset=UTF-8",
         "Origin": "https://developer.riotgames.com"
     }
-    peopleIds = []
-    
+
     try:
-        for i in range(0, FRIENDS_GAME_NAMES.__len__()):
-            url = f"{LOL_AMERICA_REGION_URL}/riot/account/v1/accounts/by-riot-id/{FRIENDS_GAME_NAMES[i]}/{FRIENDS_TAG_LINE[i]}"
-            response = requests.get(url, headers=riot_api_headers)
-            response.raise_for_status()
-            peopleIds.append(response.json())
-            if (debugFlag):
-                LOG.debug(peopleIds[i])
-            time.sleep(.1)
-            
+        with open(PLAYERS_FILENAME, "rb") as playersFile:
+            players = tomllib.load(playersFile)["player"]
+
+        last_state = loadState()
+        cached_puuids = {entry["riot_id"]: puuid for puuid, entry in last_state.items()}
+        new_state = {}
         friendsArr = []
         unranked_players = []
-            
-        for i in range(0, peopleIds.__len__()):
-            url = f"{LOL_NA1_PLATFORM_API_URL}/lol/league/v4/entries/by-puuid/{peopleIds[i]['puuid']}"
+
+        for player in players:
+            riot_id = player["riot_id"]
+            game_name, tag_line = riot_id.split("#")
+
+            puuid = cached_puuids.get(riot_id)
+            if puuid is None:
+                url = f"{LOL_AMERICA_REGION_URL}/riot/account/v1/accounts/by-riot-id/{game_name}/{tag_line}"
+                response = requests.get(url, headers=riot_api_headers)
+                response.raise_for_status()
+                puuid = response.json()["puuid"]
+                if (debugFlag):
+                    LOG.debug(response.json())
+                time.sleep(.1)
+
+            url = f"{LOL_NA1_PLATFORM_API_URL}/lol/league/v4/entries/by-puuid/{puuid}"
             response = requests.get(url, headers=riot_api_headers)
             response.raise_for_status()
             obj = response.json()
-            
+
             if (debugFlag):
                 LOG.debug(obj)
+            new_state[puuid] = {"riot_id": riot_id}
             if (obj.__len__() == 0):
-                unranked_players.append(FRIENDS_GAME_NAMES[i])
+                unranked_players.append(game_name)
             else:
-                friendsArr.append(ranked_player(FRIENDS_GAME_NAMES[i], obj[0]['tier'], obj[0]['rank'], obj[0]['leaguePoints']))
+                friendsArr.append(ranked_player(puuid, game_name, obj[0]['tier'], obj[0]['rank'], obj[0]['leaguePoints']))
+                new_state[puuid].update(tier=obj[0]['tier'], rank=obj[0]['rank'], lp=obj[0]['leaguePoints'])
             time.sleep(.1)
-            
+
         sorted_players = sorted(friendsArr)
         curr_timestamp = getTimeStamp()
-        
-        last_sorted_players = loadData()
+
+        last_sorted_players = rankedPlayersFromState(last_state)
         if debugFlag and len(sorted_players) > 0:
             sorted_players[0].playerLP += 1
             if len(sorted_players) > 1:
@@ -176,11 +196,14 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
                 headers={"Authorization": f"{discord_bot_api_key}"},
                 json={"content": message, "tts": "false"})         
             response.raise_for_status()
-            storeData(sorted_players)
+            storeState(new_state)
             LOG.info(response)
             return 1
-            
-            
+
+        # Nothing to post, but still save so new puuids and renames get cached
+        if (not debugFlag):
+            storeState(new_state)
+
         return -1
         
     except requests.exceptions.RequestException as e:

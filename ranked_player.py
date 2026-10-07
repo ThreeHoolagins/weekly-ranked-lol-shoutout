@@ -3,7 +3,8 @@ class ranked_player:
     TIER_ORDER = ['UNRANKED', 'IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER']
     RANK_ORDER = ['IV', 'III', 'II', 'I']
     
-    def __init__(self, playerName, playerTier, playerRank, playerLP):
+    def __init__(self, puuid, playerName, playerTier, playerRank, playerLP):
+        self.puuid = puuid
         self.playerName = playerName
         self.playerTier = playerTier
         self.playerRank = playerRank
@@ -16,9 +17,9 @@ class ranked_player:
             return True
         
     def __repr__(self, top_rank_lp=0, old_player=None):
-        if old_player is not None and self.playerName != old_player.playerName:
+        if old_player is not None and self.puuid != old_player.puuid:
             raise ValueError(
-                f"Player name mismatch in __repr__: "
+                f"Player mismatch in __repr__: "
                 f"current '{self.playerName}' != old '{old_player.playerName}'"
             )
 
@@ -38,7 +39,7 @@ class ranked_player:
             
     
     def __eq__(self, other):
-        return self.playerName == other.playerName and self.playerLP == other.playerLP
+        return self.puuid == other.puuid and self.playerLP == other.playerLP
     
     def find_player_value(self):
         total_value = 0

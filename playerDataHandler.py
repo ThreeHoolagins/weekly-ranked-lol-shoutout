@@ -1,6 +1,6 @@
 import sqlite3
 
-from data import SQLITE_PATH
+from config import SQLITE_PATH
 
 def get_conn():
     conn = sqlite3.connect(SQLITE_PATH, timeout=30)
