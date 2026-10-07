@@ -116,8 +116,6 @@ def write_env():
         "PROJECT_EMAIL": data.PROJECT_EMAIL,
         "PROJECT_EMAIL_APP_PASSWORD": data.PROJECT_EMAIL_APP_PASSWORD,
     }
-    if hasattr(data, "SQLITE_PATH"):
-        env["SQLITE_PATH"] = data.SQLITE_PATH
 
     with open(ENV_FILENAME, "w", encoding="utf-8") as envFile:
         for key, value in env.items():

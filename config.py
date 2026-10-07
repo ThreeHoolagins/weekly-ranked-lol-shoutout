@@ -24,5 +24,3 @@ PERSONAL_EMAIL = os.environ["PERSONAL_EMAIL"]
 # This is setup for gmail
 PROJECT_EMAIL = os.environ["PROJECT_EMAIL"]
 PROJECT_EMAIL_APP_PASSWORD = os.environ["PROJECT_EMAIL_APP_PASSWORD"]
-
-SQLITE_PATH = os.environ.get("SQLITE_PATH", "./data/data.sqlite3")
