@@ -9,6 +9,7 @@ from datetime import datetime
 import requests
 
 from clients.discord_http_client import messageHost, messageRankedRaceChannel
+from config import runtime
 from emailPage import PageError
 from rankedPlayer import rankedPlayer
 from riotApiConstants import LOL_AMERICA_REGION_URL, LOL_NA1_PLATFORM_API_URL
@@ -121,7 +122,7 @@ def getDayWithSuffix(day):
         return f"{day}{suffixes.get(day % 10, 'th')}"
 
 
-def messageGroup(riotApiKey, discordBotApiKey, debugFlag):
+def messageGroup(riotApiKey, discordBotApiKey):
     LOG = logging.getLogger("rankedRaceMessageJob")
 
     riotApiHeaders = {
@@ -151,7 +152,7 @@ def messageGroup(riotApiKey, discordBotApiKey, debugFlag):
                 response = requests.get(url, headers=riotApiHeaders, timeout=10)
                 response.raise_for_status()
                 puuid = response.json()["puuid"]
-                if debugFlag:
+                if runtime.DEBUG:
                     LOG.debug(response.json())
                 time.sleep(0.1)
 
@@ -160,7 +161,7 @@ def messageGroup(riotApiKey, discordBotApiKey, debugFlag):
             response.raise_for_status()
             obj = response.json()
 
-            if debugFlag:
+            if runtime.DEBUG:
                 LOG.debug(obj)
             newState[puuid] = {"riot_id": riotId}
             if obj.__len__() == 0:
@@ -174,14 +175,14 @@ def messageGroup(riotApiKey, discordBotApiKey, debugFlag):
         currTimestamp = getTimeStamp()
 
         lastSortedPlayers = rankedPlayersFromState(lastState)
-        if debugFlag and len(sortedPlayers) > 0:
+        if runtime.DEBUG and len(sortedPlayers) > 0:
             sortedPlayers[0].playerLP += 1
             if len(sortedPlayers) > 1:
                 sortedPlayers[-1].playerLP -= 1
             LOG.debug("--- Debug LP manipulation applied (top +1, bottom -1) ---")
         changed = hasDataChanged(sortedPlayers, lastSortedPlayers)
 
-        if debugFlag:
+        if runtime.DEBUG:
             LOG.debug("--- New player data ---")
             for p in sortedPlayers:
                 LOG.debug(f"  {p.playerName}: {p.playerTier} {p.playerRank} {p.playerLP} LP")
@@ -195,14 +196,14 @@ def messageGroup(riotApiKey, discordBotApiKey, debugFlag):
             LOG.debug(f"--- Generated message ---\n{message}")
             messageHost(message)
 
-        if not debugFlag and changed:
+        if not runtime.DEBUG and changed:
             message = generateMessage(currTimestamp, sortedPlayers, unrankedPlayers, lastSortedPlayers)
             response = messageRankedRaceChannel(message)
             storeState(newState)
             return 1
 
         # Nothing to post, but still save so new puuids and renames get cached
-        if not debugFlag:
+        if not runtime.DEBUG:
             storeState(newState)
 
         return -1

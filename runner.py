@@ -3,7 +3,7 @@ import sys
 import traceback
 from datetime import datetime
 
-from config import DISCORD_BOT_KEY, RIOT_API_KEY
+from config import DISCORD_BOT_KEY, RIOT_API_KEY, runtime
 from emailPage import PageError
 from messageGroup import messageGroup
 from patchListenerJob import PatchNotPostedException, checkForPatch
@@ -13,9 +13,7 @@ JOB_SUCCEEDED_STATUS = "Job Succeeded"
 JOB_SKIPPED_STATUS = "Job Skipped"
 
 
-# Arg 1 : Riot Api Key
-# Arg 2 : Discord Bot Api Key
-# Arg 3 : (Optional) Debug Flag
+# Arg 1 : (Optional) "debug" to run in debug mode
 def main():
     LOG = logging.getLogger("pipeline")
 
@@ -28,20 +26,19 @@ def main():
         datefmt="%m/%d/%Y %I:%M:%S %p",
     )
 
-    debugFlag = False
-    if len(sys.argv) > 1:
-        debugFlag = sys.argv[1] == "debug"
+    runtime.DEBUG = len(sys.argv) > 1 and sys.argv[1] == "debug"
+    if runtime.DEBUG:
         LOG.info("\n\nDebug run started at %s\n\n", datetime.now().astimezone().strftime("%Y/%m/%d %I:%M %p"))
 
     try:
-        jobStatusWrapper(messageGroup.__name__, messageGroup(RIOT_API_KEY, DISCORD_BOT_KEY, debugFlag))
+        jobStatusWrapper(messageGroup.__name__, messageGroup(RIOT_API_KEY, DISCORD_BOT_KEY))
     except Exception:
         LOG.error(traceback.format_exc())
         PageError(traceback.format_exc())
         jobStatusWrapper(messageGroup.__name__, 0)
 
     try:
-        jobStatusWrapper(checkForPatch.__name__, checkForPatch(RIOT_API_KEY, DISCORD_BOT_KEY, debugFlag))
+        jobStatusWrapper(checkForPatch.__name__, checkForPatch(RIOT_API_KEY, DISCORD_BOT_KEY))
     except PatchNotPostedException:
         LOG.info("Patch Not Found")
         jobStatusWrapper(checkForPatch.__name__, -1)

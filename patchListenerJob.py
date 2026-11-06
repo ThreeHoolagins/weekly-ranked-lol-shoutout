@@ -5,6 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from clients.discord_http_client import messageHost, messageNewsChannel
+from config import runtime
 
 LAST_RUN_FILENAME = "./data/state/lastPatchVersion.txt"
 # League gold
@@ -96,7 +97,7 @@ def buildPatchAnnouncement(patchVersion):
     }
 
 
-def checkForPatch(riotApiKey, discordBotApiKey, debug=False):
+def checkForPatch(riotApiKey, discordBotApiKey):
     LOG = logging.getLogger("patchListenerJob")
 
     previousPatchId = getPreviousPatch()
@@ -104,7 +105,7 @@ def checkForPatch(riotApiKey, discordBotApiKey, debug=False):
     guessPatchId = guessNextPatch(previousPatchId)
     LOG.info(f"Patch guess: {guessPatchId}")
 
-    if debug:
+    if runtime.DEBUG:
         LOG.debug(
             f"Guess Patch: '{guessPatchId}', Last Patch: '{previousPatchId}, Equal? '{guessPatchId == previousPatchId}'"
         )
