@@ -3,7 +3,7 @@ import time
 
 from requests import get
 
-from config import RIOT_API_KEY
+from config import RIOT_API_KEY, runtime
 from riotApiConstants import LOL_AMERICA_REGION_URL, LOL_NA1_PLATFORM_API_URL
 
 riot_api_headers = {
@@ -20,13 +20,13 @@ class RiotApiFailedException(Exception):
     pass
 
 
-def getPUUIDByGameName(gameName, tagLine, debugFlag):
+def getPUUIDByGameName(gameName, tagLine):
     url = f"{LOL_AMERICA_REGION_URL}/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}"
 
     response = get(url, headers=riot_api_headers, timeout=10)
     response.raise_for_status()
 
-    if debugFlag:
+    if runtime.DEBUG:
         LOG.debug(response.json())
     time.sleep(0.1)
 
