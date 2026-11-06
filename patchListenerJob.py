@@ -97,7 +97,7 @@ def buildPatchAnnouncement(patchVersion):
     }
 
 
-def checkForPatch(riotApiKey, discordBotApiKey):
+def checkForPatch():
     LOG = logging.getLogger("patchListenerJob")
 
     previousPatchId = getPreviousPatch()

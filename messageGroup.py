@@ -9,17 +9,13 @@ from datetime import datetime
 import requests
 
 from clients.discord_http_client import messageHost, messageRankedRaceChannel
+from clients.riot_developer_api_client import getPlayerRankedData, getPUUIDByGameName
 from config import runtime
 from emailPage import PageError
 from rankedPlayer import rankedPlayer
-from riotApiConstants import LOL_AMERICA_REGION_URL, LOL_NA1_PLATFORM_API_URL
 
 PLAYERS_FILENAME = "./config/players.toml"
 STATE_FILENAME = "./data/state/state.json"
-
-
-class RiotApiFailedException(Exception):
-    pass
 
 
 # state.json is written by the job, never by hand. It's keyed by puuid so
@@ -122,15 +118,8 @@ def getDayWithSuffix(day):
         return f"{day}{suffixes.get(day % 10, 'th')}"
 
 
-def messageGroup(riotApiKey, discordBotApiKey):
+def messageGroup():
     LOG = logging.getLogger("rankedRaceMessageJob")
-
-    riotApiHeaders = {
-        "X-Riot-Token": riotApiKey,
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Charset": "application/x-www-form-urlencoded; charset=UTF-8",
-        "Origin": "https://developer.riotgames.com",
-    }
 
     try:
         with open(PLAYERS_FILENAME, "rb") as playersFile:
@@ -148,27 +137,29 @@ def messageGroup(riotApiKey, discordBotApiKey):
 
             puuid = cachedPuuids.get(riotId)
             if puuid is None:
-                url = f"{LOL_AMERICA_REGION_URL}/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}"
-                response = requests.get(url, headers=riotApiHeaders, timeout=10)
-                response.raise_for_status()
-                puuid = response.json()["puuid"]
-                if runtime.DEBUG:
-                    LOG.debug(response.json())
-                time.sleep(0.1)
-
-            url = f"{LOL_NA1_PLATFORM_API_URL}/lol/league/v4/entries/by-puuid/{puuid}"
-            response = requests.get(url, headers=riotApiHeaders, timeout=10)
-            response.raise_for_status()
-            obj = response.json()
+                puuid = getPUUIDByGameName(gameName, tagLine)
+            rankedPlayerData = getPlayerRankedData(puuid)
 
             if runtime.DEBUG:
-                LOG.debug(obj)
+                LOG.debug(rankedPlayerData)
             newState[puuid] = {"riot_id": riotId}
-            if obj.__len__() == 0:
+            if rankedPlayerData.__len__() == 0:
                 unrankedPlayers.append(gameName)
             else:
-                friendsArr.append(rankedPlayer(puuid, gameName, obj[0]["tier"], obj[0]["rank"], obj[0]["leaguePoints"]))
-                newState[puuid].update(tier=obj[0]["tier"], rank=obj[0]["rank"], lp=obj[0]["leaguePoints"])
+                friendsArr.append(
+                    rankedPlayer(
+                        puuid,
+                        gameName,
+                        rankedPlayerData[0]["tier"],
+                        rankedPlayerData[0]["rank"],
+                        rankedPlayerData[0]["leaguePoints"],
+                    )
+                )
+                newState[puuid].update(
+                    tier=rankedPlayerData[0]["tier"],
+                    rank=rankedPlayerData[0]["rank"],
+                    lp=rankedPlayerData[0]["leaguePoints"],
+                )
             time.sleep(0.1)
 
         sortedPlayers = sorted(friendsArr)
@@ -198,7 +189,7 @@ def messageGroup(riotApiKey, discordBotApiKey):
 
         if not runtime.DEBUG and changed:
             message = generateMessage(currTimestamp, sortedPlayers, unrankedPlayers, lastSortedPlayers)
-            response = messageRankedRaceChannel(message)
+            messageRankedRaceChannel(message)
             storeState(newState)
             return 1
 

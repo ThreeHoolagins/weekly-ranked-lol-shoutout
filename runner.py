@@ -3,7 +3,7 @@ import sys
 import traceback
 from datetime import datetime
 
-from config import DISCORD_BOT_KEY, RIOT_API_KEY, runtime
+from config import runtime
 from emailPage import PageError
 from messageGroup import messageGroup
 from patchListenerJob import PatchNotPostedException, checkForPatch
@@ -31,14 +31,14 @@ def main():
         LOG.info("\n\nDebug run started at %s\n\n", datetime.now().astimezone().strftime("%Y/%m/%d %I:%M %p"))
 
     try:
-        jobStatusWrapper(messageGroup.__name__, messageGroup(RIOT_API_KEY, DISCORD_BOT_KEY))
+        jobStatusWrapper(messageGroup.__name__, messageGroup())
     except Exception:
         LOG.error(traceback.format_exc())
         PageError(traceback.format_exc())
         jobStatusWrapper(messageGroup.__name__, 0)
 
     try:
-        jobStatusWrapper(checkForPatch.__name__, checkForPatch(RIOT_API_KEY, DISCORD_BOT_KEY))
+        jobStatusWrapper(checkForPatch.__name__, checkForPatch())
     except PatchNotPostedException:
         LOG.info("Patch Not Found")
         jobStatusWrapper(checkForPatch.__name__, -1)
