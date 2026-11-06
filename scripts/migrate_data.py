@@ -1,8 +1,8 @@
 # One-time migration from the old data.py + lastMessage.pkl setup to
-# .env + players.toml + data/state.json. Run from the project root.
+# config/.env + config/players.toml + data/state/state.json. Works from any directory.
 #
-#   python migrate_data.py            # migrate, backing up the old files first
-#   python migrate_data.py rollback   # put the old files back, then `git checkout master`
+#   python scripts/migrate_data.py            # migrate, backing up the old files first
+#   python scripts/migrate_data.py rollback   # put the old files back, then `git checkout master`
 #
 # Migrating never deletes or edits data.py or lastMessage.pkl; it copies them to
 # BACKUP_DIR first. Once you're happy on the new setup, delete this file, data.py,
@@ -18,11 +18,17 @@ import tomllib
 
 import requests
 
+# Paths below are relative to the project root, and data.py, riotApiConstants and
+# ranked_player live there, so run from the root no matter where we were called from.
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.chdir(PROJECT_ROOT)
+sys.path.insert(0, PROJECT_ROOT)
+
 from riotApiConstants import LOL_AMERICA_REGION_URL
 
-ENV_FILENAME = ".env"
-PLAYERS_FILENAME = "players.toml"
-STATE_FILENAME = "./data/state.json"
+ENV_FILENAME = "./config/.env"
+PLAYERS_FILENAME = "./config/players.toml"
+STATE_FILENAME = "./data/state/state.json"
 OLD_DATA_FILENAME = "data.py"
 OLD_STATE_FILENAME = "lastMessage.pkl"
 BACKUP_DIR = "./data/pre-migration-backup"
@@ -45,7 +51,7 @@ def migrate():
     write_state()
     write_players()
     write_env()
-    print("Done. Add discord_id lines to players.toml when you're ready for role sync.")
+    print("Done. Add discord_id lines to config/players.toml when you're ready for role sync.")
 
 def backup_old_files():
     os.makedirs(BACKUP_DIR, exist_ok=True)

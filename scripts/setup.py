@@ -1,13 +1,13 @@
 """Interactive helper to set up everything the bot needs to run.
 
 1. Installs the Python packages in requirements.txt with pip.
-2. .env: walks through every variable config.py reads, shows what's already
+2. config/.env: walks through every variable config/__init__.py reads, shows what's already
    set, and validates input against known formats before saving.
-3. players.toml: lists the tracked players and lets you add or remove them.
-4. Creates the data/ and logs/ folders the jobs write into.
+3. config/players.toml: lists the tracked players and lets you add or remove them.
+4. Creates the data/state/ and data/logs/ folders the jobs write into.
 
-Usage (from anywhere):
-    python setup.py
+Usage (works from any directory, just point at the file):
+    python scripts/setup.py
 """
 
 import sys
@@ -25,9 +25,9 @@ from pathlib import Path
 SCRIPTS_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPTS_DIR.parent
 REQUIREMENTS_PATH = SCRIPTS_DIR / "requirements.txt"
-ENV_PATH = PROJECT_ROOT / ".env"
-PLAYERS_PATH = PROJECT_ROOT / "players.toml"
-REQUIRED_DIRS = ["data", "logs"]
+ENV_PATH = PROJECT_ROOT / "config" / ".env"
+PLAYERS_PATH = PROJECT_ROOT / "config" / "players.toml"
+REQUIRED_DIRS = ["data/state", "data/logs"]
 
 SNOWFLAKE = r"\d{17,20}"
 EMAIL = r"[^@\s]+@[^@\s]+\.[^@\s]+"
@@ -195,6 +195,7 @@ def write_env(values, extras):
         for name, value in extras.items():
             lines.append(f"{name}={quote(value)}")
         lines.append("")
+    ENV_PATH.parent.mkdir(parents=True, exist_ok=True)
     ENV_PATH.write_text("\n".join(lines), encoding="utf-8")
 
 
@@ -234,7 +235,7 @@ def setup_packages():
 
 
 def setup_env():
-    heading("Step 2: .env")
+    heading("Step 2: config/.env")
     print(f"Target: {ENV_PATH}")
 
     existing = parse_env(ENV_PATH)
@@ -342,17 +343,18 @@ def write_players(players):
         lines.append(f"riot_id = {quote(player['riot_id'])}")
         if player.get("discord_id"):
             lines.append(f"discord_id = {quote(player['discord_id'])}")
+    PLAYERS_PATH.parent.mkdir(parents=True, exist_ok=True)
     PLAYERS_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def setup_players():
-    heading("Step 3: players.toml")
+    heading("Step 3: config/players.toml")
     print(f"Target: {PLAYERS_PATH}")
 
     original = load_players()
     players = [dict(p) for p in original]
     if not PLAYERS_PATH.exists():
-        print("No players.toml found, a new one will be created.")
+        print("No config/players.toml found, a new one will be created.")
 
     while True:
         print(f"\nTracked players ({len(players)}):")
@@ -376,7 +378,7 @@ def setup_players():
             print("  Please answer a, r, or d.")
 
     if players == original and PLAYERS_PATH.exists():
-        print("No changes to players.toml.")
+        print("No changes to config/players.toml.")
         return
     if not ask_yes_no(f"\nWrite {len(players)} player(s) to {PLAYERS_PATH.name}?"):
         print(f"Skipped, {PLAYERS_PATH.name} not written.")

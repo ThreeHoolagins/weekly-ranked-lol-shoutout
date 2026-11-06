@@ -1,4 +1,4 @@
-# Copy to players.toml. One [[player]] block per person.
+# Copy to config/players.toml. One [[player]] block per person.
 # riot_id is the in-game Name#Tag.
 # discord_id is optional (right click the user > Copy User ID with developer mode on).
 

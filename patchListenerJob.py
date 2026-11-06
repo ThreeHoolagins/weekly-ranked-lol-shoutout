@@ -5,7 +5,7 @@ import logging
 from bs4 import BeautifulSoup
 from clients.discord_http_client import message_host, message_news_channel
 
-LAST_RUN_FILENAME = "./lastPatchVersion.txt"
+LAST_RUN_FILENAME = "./data/state/lastPatchVersion.txt"
 # League gold
 PATCH_ACCENT_COLOR = 0xC89B3C
 

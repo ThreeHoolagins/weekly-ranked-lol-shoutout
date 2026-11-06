@@ -11,8 +11,8 @@ from ranked_player import ranked_player
 from riotApiConstants import LOL_AMERICA_REGION_URL, LOL_NA1_PLATFORM_API_URL
 from clients.discord_http_client import message_ranked_race_channel, message_host
 
-PLAYERS_FILENAME = "players.toml"
-STATE_FILENAME = "./data/state.json"
+PLAYERS_FILENAME = "./config/players.toml"
+STATE_FILENAME = "./data/state/state.json"
 
 class RiotApiFailedException(Exception):
     pass

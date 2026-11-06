@@ -1,12 +1,9 @@
 /__pycache__
 # to avoid leaking sensitive information
-/.env
-/players.toml
+/config/.env
+/config/.env.bak
+/config/players.toml
+/config/players.toml.bak
 /data.py
-/lastMessage.pkl
-/lastPatchVersion.txt
-/logs
-/lastProcessedPatch.pkl
 /data
-/.env.bak
 */__pycache__/*

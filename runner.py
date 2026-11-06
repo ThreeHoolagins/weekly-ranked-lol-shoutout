@@ -18,7 +18,7 @@ JOB_SKIPPED_STATUS = "Job Skipped"
 def main():
     LOG = logging.getLogger("pipeline")
 
-    logging.basicConfig(filename=f'logs/runs{datetime.now().strftime("%Y-%m-%d")}.log',
+    logging.basicConfig(filename=f'data/logs/runs{datetime.now().strftime("%Y-%m-%d")}.log',
         filemode='a',
         encoding='utf-8',
         level=logging.DEBUG,

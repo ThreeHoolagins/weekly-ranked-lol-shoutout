@@ -1,9 +1,10 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Secrets and server settings live in .env (see .env.example).
-load_dotenv()
+# Secrets and server settings live in config/.env (see config/.env.example).
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 RIOT_API_KEY = os.environ["RIOT_API_KEY"]
 
