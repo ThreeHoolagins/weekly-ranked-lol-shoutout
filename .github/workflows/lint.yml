@@ -1,4 +1,4 @@
-name: Lint
+name: Lint and Test
 
 on:
   push:
@@ -18,3 +18,18 @@ jobs:
         with:
           version: "0.17.4"
           args: format --check
+
+  pytest:
+    needs: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            scripts/requirements.txt
+            tests/requirements.txt
+      - run: python -m pip install -r tests/requirements.txt
+      - run: python -m pytest tests

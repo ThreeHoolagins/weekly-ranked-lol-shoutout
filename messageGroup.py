@@ -199,7 +199,7 @@ def messageGroup():
 
         return -1
 
-    except requests.exceptions.RequestException as e:
-        LOG.error("Error: ", e, e.strerror)
+    except requests.exceptions.RequestException:
+        LOG.error(traceback.format_exc())
         PageError(traceback.format_exc())
         return 0

@@ -1,0 +1,11 @@
+# Inherit the project ruff config, plus test-only exceptions
+extend = "../pyproject.toml"
+# Treat the project's modules as first-party when sorting imports
+src = [".."]
+
+[lint.isort]
+known-first-party = ["conftest"]
+
+[lint.per-file-ignores]
+# pytest uses bare asserts
+"*" = ["S101"]

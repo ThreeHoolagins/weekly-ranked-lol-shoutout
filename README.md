@@ -28,3 +28,16 @@ ruff check --fix        # lint, auto-fixing what's safe
 ruff format             # format
 pre-commit run --all-files
 ```
+
+# Testing
+
+Tests live in `tests/` and use [pytest](https://docs.pytest.org/). They never call Riot or Discord, and they set fake config values, so no `config/.env` is needed.
+
+```
+python -m pip install -r tests/requirements.txt
+python -m pytest tests
+```
+
+Running them through `python -m` uses the same Python the bot runs on, and works even when pip's scripts folder isn't on your PATH.
+
+CI runs the tests after the linter passes.

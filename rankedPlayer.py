@@ -13,6 +13,8 @@ class rankedPlayer:
         "CHALLENGER",
     )
     RANK_ORDER = ("IV", "III", "II", "I")
+    # Tiers above diamond have no divisions, Riot always reports them as "I"
+    APEX_TIERS = ("MASTER", "GRANDMASTER", "CHALLENGER")
 
     def __init__(self, puuid, playerName, playerTier, playerRank, playerLP):
         self.puuid = puuid
@@ -43,14 +45,12 @@ class rankedPlayer:
 
         if self.playerTier == "UNRANKED":
             return f"{self.playerName} is unranked\n"
+        rankText = self.playerTier if self.playerTier in self.APEX_TIERS else f"{self.playerTier} {self.playerRank}"
         if topRankLp == 0 or topRankLp - self.findPlayerValue() == 0:
-            return (
-                f"{symbol} {self.playerName} is {self.playerTier} {self.playerRank}, "
-                f"{self.playerLP} LP, and is the leader!\n"
-            )
+            return f"{symbol} {self.playerName} is {rankText}, {self.playerLP} LP, and is the leader!\n"
         else:
             return (
-                f"{symbol} {self.playerName} is {self.playerTier} {self.playerRank}, {self.playerLP} LP. "
+                f"{symbol} {self.playerName} is {rankText}, {self.playerLP} LP. "
                 f"{topRankLp - self.findPlayerValue()} LP behind the leader!\n"
             )
 
@@ -72,15 +72,12 @@ class rankedPlayer:
         elif self.playerTier == "EMERALD":
             totalValue += 2000
         elif self.playerTier == "DIAMOND":
-            totalValue += 2200
-        elif self.playerTier == "MASTER":
-            totalValue += 2600
-        # Grandmaster and challenger are not fixed size ranks (ex. 400lp more than diamond),
-        # they are fixed player pools (500 for grandmaster, 200 for challenger)
-        elif self.playerTier == "GRANDMASTER":
-            totalValue += 3000
-        elif self.playerTier == "CHALLENGER":
-            totalValue += 4000
+            totalValue += 2400
+        # Apex elos all work as master + LP, so we set it as the same as Diamond I 100LP + their total LP
+        elif self.playerTier in self.APEX_TIERS:
+            totalValue += 2800
+            totalValue += self.playerLP
+            return totalValue
 
         if self.playerRank == "IV":
             totalValue += 0
