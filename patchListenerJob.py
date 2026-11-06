@@ -3,9 +3,7 @@ import os
 import logging
 
 from bs4 import BeautifulSoup
-from config import NEWS_CHANNEL_ID
-from discordApiConstants import DISCORD_API_URL
-from messageGroup import dmHost
+from clients.discord_http_client import message_host, message_news_channel
 
 LAST_RUN_FILENAME = "./lastPatchVersion.txt"
 # League gold
@@ -100,21 +98,12 @@ def check_for_patch(riot_api_key, discord_bot_api_key, debug=False):
         except PatchNotPostedException:
             announcement = build_patch_announcement(previous_patch_id)
         LOG.debug(f"--- Generated patch announcement ---\n{announcement}")
-        dmHost(discord_bot_api_key, announcement)
+        message_host(announcement)
         return -1
 
     if previous_patch_id != guess_patch_id:
         announcement = build_patch_announcement(guess_patch_id)
-
-        LOG.info(f"Posting message to discord {announcement}")
-        postReturn = requests.post(f"{DISCORD_API_URL}/v10/channels/{NEWS_CHANNEL_ID}/messages",
-            headers={"Authorization": f"{discord_bot_api_key}"},
-            json={"tts": False, **announcement})
-        LOG.info(f"Call returned with code {postReturn.status_code}")
+        message_news_channel(announcement)
         store_previous_patch(guess_patch_id)
-        if postReturn.status_code == 200:
-           return 1
-        else:
-            return 0
     
     return -1

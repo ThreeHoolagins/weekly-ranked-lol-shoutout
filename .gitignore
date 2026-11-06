@@ -8,3 +8,5 @@
 /logs
 /lastProcessedPatch.pkl
 /data
+/.env.bak
+*/__pycache__/*

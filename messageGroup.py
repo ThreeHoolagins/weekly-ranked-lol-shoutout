@@ -6,11 +6,10 @@ import time
 import tomllib
 import logging
 from datetime import datetime
-from config import DISCORD_CHANNEL_ID, HOST_USER_ID
-from discordApiConstants import DISCORD_API_URL
 from emailPage import PageError
 from ranked_player import ranked_player
 from riotApiConstants import LOL_AMERICA_REGION_URL, LOL_NA1_PLATFORM_API_URL
+from clients.discord_http_client import message_ranked_race_channel, message_host
 
 PLAYERS_FILENAME = "players.toml"
 STATE_FILENAME = "./data/state.json"
@@ -102,21 +101,7 @@ def get_day_with_suffix(day):
         return f"{day}th"
     else:
         suffixes = {1: 'st', 2: 'nd', 3: 'rd'}
-        return f"{day}{suffixes.get(day % 10, 'th')}"
-
-# content is either message text or a full message payload (for embeds etc.)
-def dmHost(discord_bot_api_key, content):
-    payload = content if isinstance(content, dict) else {"content": content}
-    try:
-        dm_response = requests.post(f"{DISCORD_API_URL}/v10/users/@me/channels",
-            headers={"Authorization": f"{discord_bot_api_key}"},
-            json={"recipient_id": HOST_USER_ID})
-        dm_response.raise_for_status()
-        requests.post(f"{DISCORD_API_URL}/v10/channels/{dm_response.json()['id']}/messages",
-            headers={"Authorization": f"{discord_bot_api_key}"},
-            json={"tts": False, **payload})
-    except requests.exceptions.RequestException:
-        pass
+        return f"{day}{suffixes.get(day % 10, 'th')}"    
 
 def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
     LOG = logging.getLogger("rankedRaceMessageJob")
@@ -190,16 +175,12 @@ def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
             
             message = generateMessage(curr_timestamp, sorted_players, unranked_players, last_sorted_players)
             LOG.debug(f"--- Generated message ---\n{message}")
-            dmHost(discord_bot_api_key, message)
+            message_host(message)
 
         if (not debugFlag and changed):
             message = generateMessage(curr_timestamp, sorted_players, unranked_players, last_sorted_players)
-            response = requests.post(f"{DISCORD_API_URL}/v10/channels/{DISCORD_CHANNEL_ID}/messages", 
-                headers={"Authorization": f"{discord_bot_api_key}"},
-                json={"content": message, "tts": "false"})         
-            response.raise_for_status()
+            response = message_ranked_race_channel(message)
             storeState(new_state)
-            LOG.info(response)
             return 1
 
         # Nothing to post, but still save so new puuids and renames get cached

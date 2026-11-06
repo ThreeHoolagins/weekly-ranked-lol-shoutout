@@ -11,10 +11,10 @@ class ranked_player:
         self.playerLP = int(playerLP)
         
     def __lt__(self, other):
-        if self.find_player_value() < other.find_player_value():
-            return False
-        else:
-            return True
+        return not self.find_player_value() < other.find_player_value()
+    
+    def __eq__(self, other):
+        return self.puuid == other.puuid and self.find_player_value() == other.find_player_value()
         
     def __repr__(self, top_rank_lp=0, old_player=None):
         if old_player is not None and self.puuid != old_player.puuid:
@@ -23,6 +23,7 @@ class ranked_player:
                 f"current '{self.playerName}' != old '{old_player.playerName}'"
             )
 
+        # abstract this maybe? setting?
         if old_player is None or self.find_player_value() == old_player.find_player_value():
             symbol = "\u2013"
         elif self.find_player_value() > old_player.find_player_value():
@@ -37,10 +38,6 @@ class ranked_player:
         else:
             return f"{symbol} {self.playerName} is {self.playerTier} {self.playerRank}, {self.playerLP} LP. {top_rank_lp - self.find_player_value()} LP behind the leader!\n"
             
-    
-    def __eq__(self, other):
-        return self.puuid == other.puuid and self.playerLP == other.playerLP
-    
     def find_player_value(self):
         total_value = 0
         
