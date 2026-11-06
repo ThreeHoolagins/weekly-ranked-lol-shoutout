@@ -1,6 +1,6 @@
 class ranked_player:
     
-    TIER_ORDER = ['UNRANKED', 'IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER']
+    TIER_ORDER = ['UNRANKED', 'IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER']
     RANK_ORDER = ['IV', 'III', 'II', 'I']
     
     def __init__(self, puuid, playerName, playerTier, playerRank, playerLP):
@@ -56,12 +56,17 @@ class ranked_player:
             total_value += 1200
         elif (self.playerTier == "PLATINUM"):
             total_value += 1600
-        elif (self.playerTier == "DIAMOND"):
+        elif (self.playerTier == "EMERALD"):
             total_value += 2000
+        elif (self.playerTier == "DIAMOND"):
+            total_value += 2200
         elif (self.playerTier == "MASTER"):
-            total_value += 2400
+            total_value += 2600
+        # Grandmaster and challenger are not fixed size ranks (ex. 400lp more than diamond) they are fixed player pools (500 for grandmaster, 200 for challenger)
         elif (self.playerTier == "GRANDMASTER"):
-            total_value += 2700
+            total_value += 3000
+        elif (self.playerTier == "CHALLENGER"):
+            total_value += 4000
             
         if (self.playerRank == "IV"):
             total_value += 0
