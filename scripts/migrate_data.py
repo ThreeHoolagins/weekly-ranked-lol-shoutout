@@ -19,7 +19,7 @@ import tomllib
 import requests
 
 # Paths below are relative to the project root, and data.py, riotApiConstants and
-# ranked_player live there, so run from the root no matter where we were called from.
+# rankedPlayer live there, so run from the root no matter where we were called from.
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(PROJECT_ROOT)
 sys.path.insert(0, PROJECT_ROOT)
@@ -33,11 +33,13 @@ OLD_DATA_FILENAME = "data.py"
 OLD_STATE_FILENAME = "lastMessage.pkl"
 BACKUP_DIR = "./data/pre-migration-backup"
 
+
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "rollback":
         rollback()
     else:
         migrate()
+
 
 def migrate():
     for filename in [ENV_FILENAME, PLAYERS_FILENAME, STATE_FILENAME]:
@@ -45,15 +47,16 @@ def migrate():
             print(f"{filename} already exists, not overwriting anything. Delete it to rerun.")
             return
 
-    backup_old_files()
+    backupOldFiles()
 
     # State first since it's the step that hits the Riot API and can fail
-    write_state()
-    write_players()
-    write_env()
-    print("Done. Add discord_id lines to config/players.toml when you're ready for role sync.")
+    writeState()
+    writePlayers()
+    writeEnv()
+    print("Done. Add discordId lines to config/players.toml when you're ready for role sync.")
 
-def backup_old_files():
+
+def backupOldFiles():
     os.makedirs(BACKUP_DIR, exist_ok=True)
     for filename in [OLD_DATA_FILENAME, OLD_STATE_FILENAME]:
         backup = os.path.join(BACKUP_DIR, filename)
@@ -61,57 +64,64 @@ def backup_old_files():
             shutil.copy2(filename, backup)
             print(f"Backed up {filename} to {backup}")
 
+
 # Puts data.py back if it's gone, and rebuilds lastMessage.pkl from state.json so
 # the old code picks up from the last post made on the new setup instead of
 # re-posting or showing stale arrows. The new files are left alone so you can
 # check out the branch again later without migrating twice.
 def rollback():
-    backup_data = os.path.join(BACKUP_DIR, OLD_DATA_FILENAME)
+    backupData = os.path.join(BACKUP_DIR, OLD_DATA_FILENAME)
     if not os.path.exists(OLD_DATA_FILENAME):
-        if not os.path.exists(backup_data):
-            print(f"No {OLD_DATA_FILENAME} and no backup at {backup_data}, can't roll back.")
+        if not os.path.exists(backupData):
+            print(f"No {OLD_DATA_FILENAME} and no backup at {backupData}, can't roll back.")
             return
-        shutil.copy2(backup_data, OLD_DATA_FILENAME)
-        print(f"Restored {OLD_DATA_FILENAME} from {backup_data}")
+        shutil.copy2(backupData, OLD_DATA_FILENAME)
+        print(f"Restored {OLD_DATA_FILENAME} from {backupData}")
     else:
         print(f"{OLD_DATA_FILENAME} still present, leaving it as is")
 
     if os.path.exists(STATE_FILENAME):
-        with open(STATE_FILENAME, "r", encoding="utf-8") as stateFile:
+        with open(STATE_FILENAME, encoding="utf-8") as stateFile:
             state = json.load(stateFile)
-        old_players = [old_ranked_player(entry) for entry in state.values() if "tier" in entry]
+        oldPlayers = [oldRankedPlayer(entry) for entry in state.values() if "tier" in entry]
         with open(OLD_STATE_FILENAME, "wb") as lastMessageFile:
-            pickle.dump(old_players, lastMessageFile)
-        print(f"Rebuilt {OLD_STATE_FILENAME} from {STATE_FILENAME} ({len(old_players)} ranked players)")
+            pickle.dump(oldPlayers, lastMessageFile)
+        print(f"Rebuilt {OLD_STATE_FILENAME} from {STATE_FILENAME} ({len(oldPlayers)} ranked players)")
     else:
         print(f"No {STATE_FILENAME}, leaving {OLD_STATE_FILENAME} as is")
 
-    warn_about_new_players()
+    warnAboutNewPlayers()
     print("Now run: git checkout master")
 
-# The ranked_player on master has no puuid, so build one with just the old fields.
-def old_ranked_player(entry):
-    from ranked_player import ranked_player
-    player = ranked_player.__new__(ranked_player)
+
+# The rankedPlayer on master has no puuid, so build one with just the old fields.
+def oldRankedPlayer(entry):
+    from rankedPlayer import rankedPlayer
+
+    player = rankedPlayer.__new__(rankedPlayer)
     player.playerName = entry["riot_id"].split("#")[0]
     player.playerTier = entry["tier"]
     player.playerRank = entry["rank"]
     player.playerLP = int(entry["lp"])
     return player
 
-def warn_about_new_players():
+
+def warnAboutNewPlayers():
     if not os.path.exists(PLAYERS_FILENAME):
         return
     import data
+
     with open(PLAYERS_FILENAME, "rb") as playersFile:
-        riot_ids = [player["riot_id"] for player in tomllib.load(playersFile)["player"]]
-    old_riot_ids = [f"{name}#{tag}" for name, tag in zip(data.FRIENDS_GAME_NAMES, data.FRIENDS_TAG_LINE)]
-    missing = [riot_id for riot_id in riot_ids if riot_id not in old_riot_ids]
+        riotIds = [player["riot_id"] for player in tomllib.load(playersFile)["player"]]
+    oldRiotIds = [f"{name}#{tag}" for name, tag in zip(data.FRIENDS_GAME_NAMES, data.FRIENDS_TAG_LINE, strict=True)]
+    missing = [riotId for riotId in riotIds if riotId not in oldRiotIds]
     if missing:
         print(f"Heads up, these are in {PLAYERS_FILENAME} but not {OLD_DATA_FILENAME}: {', '.join(missing)}")
 
-def write_env():
+
+def writeEnv():
     import data
+
     env = {
         "RIOT_API_KEY": data.RIOT_API_KEY,
         "DISCORD_BOT_TOKEN": data.DISCORD_BOT_KEY.removeprefix("Bot "),
@@ -128,39 +138,47 @@ def write_env():
             envFile.write(f'{key}="{value}"\n')
     print(f"Wrote {ENV_FILENAME}")
 
-def write_players():
+
+def writePlayers():
     import data
+
     with open(PLAYERS_FILENAME, "w", encoding="utf-8") as playersFile:
-        playersFile.write("# One [[player]] block per person. discord_id is optional.\n")
-        for name, tag in zip(data.FRIENDS_GAME_NAMES, data.FRIENDS_TAG_LINE):
+        playersFile.write("# One [[player]] block per person. discordId is optional.\n")
+        for name, tag in zip(data.FRIENDS_GAME_NAMES, data.FRIENDS_TAG_LINE, strict=True):
             playersFile.write(f'\n[[player]]\nriot_id = "{name}#{tag}"\n')
     print(f"Wrote {PLAYERS_FILENAME} with {len(data.FRIENDS_GAME_NAMES)} players")
 
+
 # Carries the last posted ranks over so the first run still shows arrows.
-def write_state():
+def writeState():
     import data
-    old_players = {}
+
+    oldPlayers = {}
     if os.path.exists(OLD_STATE_FILENAME):
         with open(OLD_STATE_FILENAME, "rb") as lastMessageFile:
-            old_players = {p.playerName: p for p in pickle.load(lastMessageFile)}
+            oldPlayers = {p.playerName: p for p in pickle.load(lastMessageFile)}  # noqa: S301 - our own legacy file
 
     state = {}
-    for name, tag in zip(data.FRIENDS_GAME_NAMES, data.FRIENDS_TAG_LINE):
-        response = requests.get(f"{LOL_AMERICA_REGION_URL}/riot/account/v1/accounts/by-riot-id/{name}/{tag}",
-            headers={"X-Riot-Token": data.RIOT_API_KEY})
+    for name, tag in zip(data.FRIENDS_GAME_NAMES, data.FRIENDS_TAG_LINE, strict=True):
+        response = requests.get(
+            f"{LOL_AMERICA_REGION_URL}/riot/account/v1/accounts/by-riot-id/{name}/{tag}",
+            headers={"X-Riot-Token": data.RIOT_API_KEY},
+            timeout=10,
+        )
         response.raise_for_status()
         puuid = response.json()["puuid"]
 
         state[puuid] = {"riot_id": f"{name}#{tag}"}
-        if name in old_players:
-            old = old_players[name]
+        if name in oldPlayers:
+            old = oldPlayers[name]
             state[puuid].update(tier=old.playerTier, rank=old.playerRank, lp=old.playerLP)
-        time.sleep(.1)
+        time.sleep(0.1)
 
     os.makedirs(os.path.dirname(STATE_FILENAME), exist_ok=True)
     with open(STATE_FILENAME, "w", encoding="utf-8") as stateFile:
         json.dump(state, stateFile, indent=2)
-    print(f"Wrote {STATE_FILENAME} ({len(old_players)} players carried over from {OLD_STATE_FILENAME})")
+    print(f"Wrote {STATE_FILENAME} ({len(oldPlayers)} players carried over from {OLD_STATE_FILENAME})")
+
 
 if __name__ == "__main__":
     main()

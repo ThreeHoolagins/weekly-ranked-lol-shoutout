@@ -17,3 +17,14 @@ Coming from the old `data.py` setup? Run `python ./scripts/migrate_data.py` once
 ```
 python runner.py {optional: debug}
 ```
+
+# Linting
+
+[Ruff](https://docs.astral.sh/ruff/) lints and formats the code.
+
+To check or fix by hand:
+```
+ruff check --fix        # lint, auto-fixing what's safe
+ruff format             # format
+pre-commit run --all-files
+```

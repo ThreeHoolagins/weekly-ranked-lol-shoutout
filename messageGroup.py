@@ -1,194 +1,212 @@
-import traceback
-import requests
 import json
+import logging
 import os
 import time
 import tomllib
-import logging
+import traceback
 from datetime import datetime
+
+import requests
+
+from clients.discord_http_client import messageHost, messageRankedRaceChannel
 from emailPage import PageError
-from ranked_player import ranked_player
+from rankedPlayer import rankedPlayer
 from riotApiConstants import LOL_AMERICA_REGION_URL, LOL_NA1_PLATFORM_API_URL
-from clients.discord_http_client import message_ranked_race_channel, message_host
 
 PLAYERS_FILENAME = "./config/players.toml"
 STATE_FILENAME = "./data/state/state.json"
 
+
 class RiotApiFailedException(Exception):
     pass
 
+
 # state.json is written by the job, never by hand. It's keyed by puuid so
 # history survives Riot ID changes, and it caches puuids to skip account lookups:
-# { puuid: { "riot_id": "Name#Tag", "tier": ..., "rank": ..., "lp": ... } }
+# { puuid: { "riot_id": "Name#Tag", "tier": ..., "rank": ..., "lp": ... } }  # noqa: ERA001
 # Unranked players only have "riot_id".
 def storeState(state):
     with open(STATE_FILENAME, "w", encoding="utf-8") as stateFile:
         json.dump(state, stateFile, indent=2)
 
+
 def loadState():
     if not os.path.exists(STATE_FILENAME):
         return {}
-    with open(STATE_FILENAME, "r", encoding="utf-8") as stateFile:
+    with open(STATE_FILENAME, encoding="utf-8") as stateFile:
         return json.load(stateFile)
 
+
 def rankedPlayersFromState(state):
-    return [ranked_player(puuid, entry["riot_id"].split("#")[0], entry["tier"], entry["rank"], entry["lp"])
-            for puuid, entry in state.items() if "tier" in entry]
+    return [
+        rankedPlayer(puuid, entry["riot_id"].split("#")[0], entry["tier"], entry["rank"], entry["lp"])
+        for puuid, entry in state.items()
+        if "tier" in entry
+    ]
 
-def has_data_changed(new_players, old_players):
-    if not old_players:
-        return bool(new_players)
-    old_by_id = {p.puuid: p for p in old_players}
-    new_by_id = {p.puuid: p for p in new_players}
-    for puuid, player in new_by_id.items():
-        if puuid not in old_by_id or player != old_by_id[puuid]:
-            return True
-    for puuid in old_by_id:
-        if puuid not in new_by_id:
-            return True
-    return False
 
-def describe_changes(new_players, old_players):
+def hasDataChanged(newPlayers, oldPlayers):
+    if not oldPlayers:
+        return bool(newPlayers)
+    oldById = {p.puuid: p for p in oldPlayers}
+    newById = {p.puuid: p for p in newPlayers}
+    for puuid, player in newById.items():
+        if puuid not in oldById or player != oldById[puuid]:
+            return True
+    return any(puuid not in newById for puuid in oldById)
+
+
+def describeChanges(newPlayers, oldPlayers):
     lines = []
-    old_by_id = {p.puuid: p for p in old_players}
-    new_by_id = {p.puuid: p for p in new_players}
-    all_players = sorted(({**old_by_id, **new_by_id}).items(), key=lambda item: item[1].playerName)
-    for puuid, player in all_players:
-        old_p = old_by_id.get(puuid)
-        new_p = new_by_id.get(puuid)
+    oldById = {p.puuid: p for p in oldPlayers}
+    newById = {p.puuid: p for p in newPlayers}
+    allPlayers = sorted(({**oldById, **newById}).items(), key=lambda item: item[1].playerName)
+    for puuid, player in allPlayers:
+        oldP = oldById.get(puuid)
+        newP = newById.get(puuid)
         name = player.playerName
-        if old_p is None:
+        if oldP is None:
             lines.append(f"  {name}: NEW (was unranked/absent)")
-        elif new_p is None:
-            lines.append(f"  {name}: REMOVED (now unranked/absent, was {old_p.playerTier} {old_p.playerRank} {old_p.playerLP} LP)")
-        elif old_p != new_p:
-            lines.append(f"  {name}: CHANGED (was {old_p.playerTier} {old_p.playerRank} {old_p.playerLP} LP, now {new_p.playerTier} {new_p.playerRank} {new_p.playerLP} LP)")
+        elif newP is None:
+            lines.append(
+                f"  {name}: REMOVED (now unranked/absent, was {oldP.playerTier} {oldP.playerRank} {oldP.playerLP} LP)"
+            )
+        elif oldP != newP:
+            lines.append(
+                f"  {name}: CHANGED (was {oldP.playerTier} {oldP.playerRank} {oldP.playerLP} LP, "
+                f"now {newP.playerTier} {newP.playerRank} {newP.playerLP} LP)"
+            )
         else:
-            lines.append(f"  {name}: unchanged ({new_p.playerTier} {new_p.playerRank} {new_p.playerLP} LP)")
+            lines.append(f"  {name}: unchanged ({newP.playerTier} {newP.playerRank} {newP.playerLP} LP)")
     return "\n".join(lines)
 
+
 def getTimeStamp():
-    now = datetime.now()
-    day_with_suffix = get_day_with_suffix(now.day)
-    return now.strftime(f"%B {day_with_suffix} %Y at %H:%M:%S")
+    now = datetime.now().astimezone()
+    dayWithSuffix = getDayWithSuffix(now.day)
+    return now.strftime(f"%B {dayWithSuffix} %Y at %H:%M:%S")
 
-def generateMessage(timestamp, sorted_players, unranked_players, last_sorted_players=None):
-    
-    message = f"## <:questionping:1067913788709421098> Ranked Race Status as of {timestamp} <:questionping:1067913788709421098>\n```ansi\n"
-    
-    old_by_id = {p.puuid: p for p in (last_sorted_players or [])}
 
-    for player in sorted_players:
-        message += player.__repr__(sorted_players[0].find_player_value(), old_by_id.get(player.puuid))
+def generateMessage(timestamp, sortedPlayers, unrankedPlayers, lastSortedPlayers=None):
 
-    unranked_players.sort()
-    if len(unranked_players) > 0:
+    ping = "<:questionping:1067913788709421098>"
+    message = f"## {ping} Ranked Race Status as of {timestamp} {ping}\n```ansi\n"
+
+    oldById = {p.puuid: p for p in (lastSortedPlayers or [])}
+
+    for player in sortedPlayers:
+        message += player.__repr__(sortedPlayers[0].findPlayerValue(), oldById.get(player.puuid))
+
+    unrankedPlayers.sort()
+    if len(unrankedPlayers) > 0:
         message += "\n"
 
-    if len(unranked_players) > 2:
-        message += ", and ".join(unranked_players) + " are all unranked!\n"
-    elif len(unranked_players) > 1:
-        message += " and ".join(unranked_players) + " are all unranked!\n"
-    elif len(unranked_players) == 1:
-        message += unranked_players[0] + " is unranked!\n"
-    
+    if len(unrankedPlayers) > 2:
+        message += ", and ".join(unrankedPlayers) + " are all unranked!\n"
+    elif len(unrankedPlayers) > 1:
+        message += " and ".join(unrankedPlayers) + " are all unranked!\n"
+    elif len(unrankedPlayers) == 1:
+        message += unrankedPlayers[0] + " is unranked!\n"
+
     message += "```"
-    
+
     return message
 
-def get_day_with_suffix(day):
+
+def getDayWithSuffix(day):
     if 11 <= day <= 13:
         return f"{day}th"
     else:
-        suffixes = {1: 'st', 2: 'nd', 3: 'rd'}
-        return f"{day}{suffixes.get(day % 10, 'th')}"    
+        suffixes = {1: "st", 2: "nd", 3: "rd"}
+        return f"{day}{suffixes.get(day % 10, 'th')}"
 
-def messageGroup(riot_api_key, discord_bot_api_key, debugFlag):
+
+def messageGroup(riotApiKey, discordBotApiKey, debugFlag):
     LOG = logging.getLogger("rankedRaceMessageJob")
-    
-    riot_api_headers = {
-        "X-Riot-Token": riot_api_key,
-        "Accept-Language" : "en-US,en;q=0.9",
+
+    riotApiHeaders = {
+        "X-Riot-Token": riotApiKey,
+        "Accept-Language": "en-US,en;q=0.9",
         "Accept-Charset": "application/x-www-form-urlencoded; charset=UTF-8",
-        "Origin": "https://developer.riotgames.com"
+        "Origin": "https://developer.riotgames.com",
     }
 
     try:
         with open(PLAYERS_FILENAME, "rb") as playersFile:
             players = tomllib.load(playersFile)["player"]
 
-        last_state = loadState()
-        cached_puuids = {entry["riot_id"]: puuid for puuid, entry in last_state.items()}
-        new_state = {}
+        lastState = loadState()
+        cachedPuuids = {entry["riot_id"]: puuid for puuid, entry in lastState.items()}
+        newState = {}
         friendsArr = []
-        unranked_players = []
+        unrankedPlayers = []
 
         for player in players:
-            riot_id = player["riot_id"]
-            game_name, tag_line = riot_id.split("#")
+            riotId = player["riot_id"]
+            gameName, tagLine = riotId.split("#")
 
-            puuid = cached_puuids.get(riot_id)
+            puuid = cachedPuuids.get(riotId)
             if puuid is None:
-                url = f"{LOL_AMERICA_REGION_URL}/riot/account/v1/accounts/by-riot-id/{game_name}/{tag_line}"
-                response = requests.get(url, headers=riot_api_headers)
+                url = f"{LOL_AMERICA_REGION_URL}/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}"
+                response = requests.get(url, headers=riotApiHeaders, timeout=10)
                 response.raise_for_status()
                 puuid = response.json()["puuid"]
-                if (debugFlag):
+                if debugFlag:
                     LOG.debug(response.json())
-                time.sleep(.1)
+                time.sleep(0.1)
 
             url = f"{LOL_NA1_PLATFORM_API_URL}/lol/league/v4/entries/by-puuid/{puuid}"
-            response = requests.get(url, headers=riot_api_headers)
+            response = requests.get(url, headers=riotApiHeaders, timeout=10)
             response.raise_for_status()
             obj = response.json()
 
-            if (debugFlag):
+            if debugFlag:
                 LOG.debug(obj)
-            new_state[puuid] = {"riot_id": riot_id}
-            if (obj.__len__() == 0):
-                unranked_players.append(game_name)
+            newState[puuid] = {"riot_id": riotId}
+            if obj.__len__() == 0:
+                unrankedPlayers.append(gameName)
             else:
-                friendsArr.append(ranked_player(puuid, game_name, obj[0]['tier'], obj[0]['rank'], obj[0]['leaguePoints']))
-                new_state[puuid].update(tier=obj[0]['tier'], rank=obj[0]['rank'], lp=obj[0]['leaguePoints'])
-            time.sleep(.1)
+                friendsArr.append(rankedPlayer(puuid, gameName, obj[0]["tier"], obj[0]["rank"], obj[0]["leaguePoints"]))
+                newState[puuid].update(tier=obj[0]["tier"], rank=obj[0]["rank"], lp=obj[0]["leaguePoints"])
+            time.sleep(0.1)
 
-        sorted_players = sorted(friendsArr)
-        curr_timestamp = getTimeStamp()
+        sortedPlayers = sorted(friendsArr)
+        currTimestamp = getTimeStamp()
 
-        last_sorted_players = rankedPlayersFromState(last_state)
-        if debugFlag and len(sorted_players) > 0:
-            sorted_players[0].playerLP += 1
-            if len(sorted_players) > 1:
-                sorted_players[-1].playerLP -= 1
+        lastSortedPlayers = rankedPlayersFromState(lastState)
+        if debugFlag and len(sortedPlayers) > 0:
+            sortedPlayers[0].playerLP += 1
+            if len(sortedPlayers) > 1:
+                sortedPlayers[-1].playerLP -= 1
             LOG.debug("--- Debug LP manipulation applied (top +1, bottom -1) ---")
-        changed = has_data_changed(sorted_players, last_sorted_players)
+        changed = hasDataChanged(sortedPlayers, lastSortedPlayers)
 
         if debugFlag:
             LOG.debug("--- New player data ---")
-            for p in sorted_players:
+            for p in sortedPlayers:
                 LOG.debug(f"  {p.playerName}: {p.playerTier} {p.playerRank} {p.playerLP} LP")
             LOG.debug("--- Old player data ---")
-            for p in last_sorted_players:
+            for p in lastSortedPlayers:
                 LOG.debug(f"  {p.playerName}: {p.playerTier} {p.playerRank} {p.playerLP} LP")
             LOG.debug(f"--- Changes detected: {changed} ---")
-            LOG.debug("\n" + describe_changes(sorted_players, last_sorted_players))
-            
-            message = generateMessage(curr_timestamp, sorted_players, unranked_players, last_sorted_players)
-            LOG.debug(f"--- Generated message ---\n{message}")
-            message_host(message)
+            LOG.debug("\n" + describeChanges(sortedPlayers, lastSortedPlayers))
 
-        if (not debugFlag and changed):
-            message = generateMessage(curr_timestamp, sorted_players, unranked_players, last_sorted_players)
-            response = message_ranked_race_channel(message)
-            storeState(new_state)
+            message = generateMessage(currTimestamp, sortedPlayers, unrankedPlayers, lastSortedPlayers)
+            LOG.debug(f"--- Generated message ---\n{message}")
+            messageHost(message)
+
+        if not debugFlag and changed:
+            message = generateMessage(currTimestamp, sortedPlayers, unrankedPlayers, lastSortedPlayers)
+            response = messageRankedRaceChannel(message)
+            storeState(newState)
             return 1
 
         # Nothing to post, but still save so new puuids and renames get cached
-        if (not debugFlag):
-            storeState(new_state)
+        if not debugFlag:
+            storeState(newState)
 
         return -1
-        
+
     except requests.exceptions.RequestException as e:
         LOG.error("Error: ", e, e.strerror)
         PageError(traceback.format_exc())
