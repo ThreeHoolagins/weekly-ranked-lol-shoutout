@@ -4,6 +4,7 @@ import os
 import requests
 from bs4 import BeautifulSoup
 
+from clients.data_dragon_client import getVersionFile
 from clients.discord_http_client import messageHost, messageNewsChannel
 from config import runtime
 
@@ -33,8 +34,8 @@ def getPreviousPatch():
 
 
 def longFetchPatch():
-    r = requests.get("https://ddragon.leagueoflegends.com/api/versions.json", timeout=10)
-    patchParts = r.json()[0].split(".")
+    versionFile = getVersionFile()
+    patchParts = versionFile[0].split(".")
     return f"{int(patchParts[0]) + 10}-{int(patchParts[1]) - 1}"
 
 

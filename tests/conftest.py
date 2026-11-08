@@ -23,10 +23,9 @@ for name in (
 
 import emailPage  # noqa: E402
 import runner  # noqa: E402
-from clients import discord_http_client, riot_developer_api_client  # noqa: E402
+from clients import data_dragon_client, discord_http_client, riot_developer_api_client  # noqa: E402
 from config import DISCORD_CHANNEL_ID, NEWS_CHANNEL_ID, runtime  # noqa: E402
 from patchListenerJob import getPatchNotesUrl  # noqa: E402
-from riotApiConstants import DATA_DRAGON_VERSIONS_URL  # noqa: E402
 
 # Fake players tracked in config/players.toml
 RIOT_IDS = ["SHEEP#NA1", "COW#NA1", "WINNER#GAMER", "KOALA#NA1"]
@@ -107,7 +106,7 @@ class FakeInternet:
             return FakeResponse({"puuid": puuidFor(f"{gameName}#{tagLine}")})
         if "/lol/league/v4/entries/by-puuid/" in url:
             return respond(self.ranked[url.split("/")[-1]])
-        if url == DATA_DRAGON_VERSIONS_URL:
+        if url == data_dragon_client.DATA_DRAGON_VERSIONS_URL:
             return respond(self.versions)
         if "/news/game-updates/" in url:
             for patch, page in self.patchPages.items():
@@ -174,6 +173,7 @@ def internet(monkeypatch):
     monkeypatch.setattr(requests, "get", fake.get)
     monkeypatch.setattr(requests, "post", fake.post)
     monkeypatch.setattr(riot_developer_api_client, "get", fake.get)
+    monkeypatch.setattr(data_dragon_client, "get", fake.get)
     monkeypatch.setattr(discord_http_client, "post", fake.post)
     monkeypatch.setattr(emailPage.smtplib, "SMTP_SSL", FakeSmtp)
     monkeypatch.setattr(time, "sleep", lambda _: None)

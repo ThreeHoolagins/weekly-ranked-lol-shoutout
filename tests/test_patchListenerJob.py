@@ -2,9 +2,9 @@ import json
 
 import pytest
 
+from clients.data_dragon_client import DATA_DRAGON_VERSIONS_URL
 from conftest import PATCH_IMAGE, PATCH_TAGLINE
 from patchListenerJob import PatchNotPostedException, checkForPatch, getPatchNotesUrl
-from riotApiConstants import DATA_DRAGON_VERSIONS_URL
 
 
 def test_postsNextPatchWhenPageIsUp(project, internet):

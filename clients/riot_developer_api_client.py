@@ -4,7 +4,10 @@ import time
 from requests import get
 
 from config import RIOT_API_KEY, runtime
-from riotApiConstants import LOL_AMERICA_REGION_URL, LOL_NA1_PLATFORM_API_URL
+
+# League of Legends America Server URLs
+LOL_AMERICA_REGION_URL = "https://americas.api.riotgames.com"
+LOL_NA1_PLATFORM_API_URL = "https://na1.api.riotgames.com"
 
 riot_api_headers = {
     "X-Riot-Token": RIOT_API_KEY,
